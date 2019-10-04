@@ -1,1 +1,1 @@
-# notes on data directory
+Any saved data (csv) or saved models (pkl)
