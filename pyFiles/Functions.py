@@ -8,6 +8,7 @@ def generic():
     args:           type:           description:
 
     kwargs:         type:           description:
+    verbose         bool            flag to print, default = False
 
     ============================================================================
     output:         type:
@@ -24,8 +25,8 @@ def generic():
 # import external dependencies                                                  #
 #===============================================================================#
 
+import os
 import pickle
-
 
 #===============================================================================#
 # coordinate frames                                                             #
@@ -71,16 +72,24 @@ def spherical2cartesian( *args ):
 # file handling                                                                 #
 #===============================================================================#
 
-def toPickle( fromObject, toFile ):
+def toPickle( toFile, fromObject, **kwargs ):
     """
     use:
+    sends object (preferably dictionary) to pickle and saves at file name
+    provided.
+    https://pythonprogramming.net/python-pickle-module-save-objects-serialization/
 
     ============================================================================
     input:          type:           description:
     ============================================================================
     args:           type:           description:
+    toFile          str             file name to save at
+    fromObject      dict            dictionary (or other object) to send to
+                                    pickle.
 
     kwargs:         type:           description:
+    verbose         bool            whether to print save message.
+                                    default = False
 
     ============================================================================
     output:         type:
@@ -88,23 +97,48 @@ def toPickle( fromObject, toFile ):
     None            None
     """
 
-def fromPickle( fromFile ):
+    toFile = f"../data/{toFile}.pkl"
+
+    pickle.dump(
+        fromObject,             # object to write
+        open( toFile, "wb" )    # open file and write object to it in bytes
+    )
+
+    printHeader( f"\n\tsaved pickle to {toFile}", **kwargs )
+
+def fromPickle( fromFile, **kwargs ):
     """
     use:
+    loads object (preferably from dictionary) from file name provided. if not
+    file found, returns empty dictionary.
+    https://pythonprogramming.net/python-pickle-module-save-objects-serialization/
 
     ============================================================================
     input:          type:           description:
     ============================================================================
     args:           type:           description:
+    fromFile        str             file name to look for pickled object
 
     kwargs:         type:           description:
+    verbose         bool            whether to print load message.
+                                    default = False
 
     ============================================================================
     output:         type:
     ============================================================================
-    None            None
+    toObject        dict (or other object)
     """
-    pass
+
+    fromFile = f"../data/{fromFile}.pkl"
+
+    if os.path.isfile( fromFile ):
+        toObject = pickle.load(
+            open( fromFile, 'rb' ) # read the byte file
+        )
+    else:
+        toObject = {}
+
+    return toObject
 
 #===============================================================================#
 # printing                                                                      #
@@ -144,9 +178,8 @@ def printDict( dictionary, **kwargs ):
     ============================================================================
     input:          type:           description:
     ============================================================================
-    dictionary      dict            a dictionary to print
-
     args:           type:           description:
+    dictionary      dict            a dictionary to print
 
     kwargs:         type:           description:
     verbose         bool            whether to actually print or not.
