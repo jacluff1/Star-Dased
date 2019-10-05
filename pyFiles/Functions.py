@@ -25,8 +25,34 @@ def generic():
 # import external dependencies                                                  #
 #===============================================================================#
 
+import matplotlib.pyplot as plt
+import numpy as np
 import os
 import pickle
+
+#===============================================================================#
+# auxillary                                                                     #
+#===============================================================================#
+
+def findIdx( value, array ):
+    """
+    use:
+
+    ============================================================================
+    input:          type:           description:
+    ============================================================================
+    args:           type:           description:
+
+    kwargs:         type:           description:
+    verbose         bool            flag to print, default = False
+
+    ============================================================================
+    output:         type:
+    ============================================================================
+    None            None
+    """
+    idx = np.abs( array - value ).argmin()
+    return idx
 
 #===============================================================================#
 # coordinate frames                                                             #
@@ -140,6 +166,31 @@ def fromPickle( fromFile, **kwargs ):
 
     return toObject
 
+def saveFigure( toFile, fig, **kwargs ):
+    """
+    use:
+    save a figure, print save destination if verbose
+
+    ============================================================================
+    input:          type:           description:
+    ============================================================================
+    args:           type:           description:
+    toFile          str             file name to save figure
+    fig             matplotlib.figure
+
+    kwargs:         type:           description:
+    verbose         bool            flag to print, default = False
+
+    ============================================================================
+    output:         type:
+    ============================================================================
+    None            None
+    """
+    toFile = f"../figures/{toFile}.pdf"
+    fig.savefig( toFile )
+    plt.close( fig )
+    printHeader( f"\n\tsaved figure: {toFile}", **kwargs )
+
 #===============================================================================#
 # printing                                                                      #
 #===============================================================================#
@@ -233,3 +284,7 @@ def printHeader( *args, **kwargs ):
         printBreak( **kwargs )
         for arg in args: print( arg )
         printBreak( **kwargs )
+
+#===============================================================================#
+# random generator                                                              #
+#===============================================================================#
