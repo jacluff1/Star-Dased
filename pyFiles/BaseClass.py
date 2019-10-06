@@ -89,9 +89,7 @@ class BaseClass:
         ========================================================================
         input:          type:           description:
         ========================================================================
-        args:           tytoObject = pickle.load(
-            open( fromFile, 'rb' ) # read the byte file
-        )pe:           description:
+        args:
 
         kwargs:         type:           description:
         verbose         bool            flag to print, default = False
@@ -104,7 +102,7 @@ class BaseClass:
         fun.toPickle( self.name_, self.__dict__, **kwargs )
 
     #===========================================================================#
-    # sudo-protected methods                                                    #
+    # semi-protected methods                                                    #
     #===========================================================================#
 
     def _dict2attributes( self, dictionary, **kwargs ):
@@ -128,6 +126,25 @@ class BaseClass:
         fun.printDict( dictionary, **kwargs )
         for key,value in dictionary.items(): setattr( self, key, value )
 
+    def _randomWalk( self, *args , **kwargs ):
+        """
+        use:
+
+        ============================================================================
+        input:          type:           description:
+        ============================================================================
+        args:           type:           description:
+
+        kwargs:         type:           description:
+        verbose         bool            flag to print, default = False
+
+        ============================================================================
+        output:         type:
+        ============================================================================
+        None            None
+        """
+        pass
+
     #===========================================================================#
-    # sudo-private methods                                                      #
+    # semi-private methods                                                      #
     #===========================================================================#

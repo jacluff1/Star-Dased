@@ -3,8 +3,6 @@
 # import internal dependencies                                                  #
 #===============================================================================#
 
-from BaseClass import BaseClass
-
 #===============================================================================#
 # import external dependencies                                                  #
 #===============================================================================#
@@ -13,17 +11,14 @@ from BaseClass import BaseClass
 # Simulation definition                                                         #
 #===============================================================================#
 
-class Simulation( BaseClass ):
+class MLbase:
 
     #===========================================================================#
     # constructor                                                               #
     #===========================================================================#
 
     def __init__( self, *args, **kwargs ):
-        # run BaseClass constructor for Simulation instance
-        super().__init__( "Simulation", *args, **kwargs )
-
-        #
+        pass
 
     #===========================================================================#
     # puplic methods                                                            #
