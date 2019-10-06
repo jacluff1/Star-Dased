@@ -10,12 +10,27 @@
 import numpy as np
 
 #===============================================================================#
+# conversions                                                                   #
+#===============================================================================#
+
+# solar radius to light year
+sr2ly = 7.35355e-8
+# parsec to light year
+pc2ly = 3.26156
+# meter to kilometer
+m2km = 1e-3
+# meter to light year
+m2ly = 1.057e-16
+
+# kilogram to solar mass
+kg2solar = 5.02785e-31
+
+#===============================================================================#
 # constants                                                                     #
 #===============================================================================#
 
-#===============================================================================#
-# conversions                                                                   #
-#===============================================================================#
+# gravitational constant ( km/s^2 ) ( ly )^2 ( solar mass )^-2
+G = 6.67408e-11 * m2km * m2ly**2 / kg2solar
 
 #===============================================================================#
 # parameters                                                                    #
@@ -26,3 +41,43 @@ IMFparams = 1.3, 2.3, 0.08, 0.5, 100.0
 
 # mass array for IMF PDF, the number density of stars (in solar mass)
 IMFmass = np.linspace( 0.08, 100, 1000 )
+
+# initial CM radius parameters
+radiusParams = (
+    # smallest placement radius = radius of smallest star ( light year )
+    0.63 * sr2ly,
+    # maximum placement radius ( light year )
+    10 * pc2ly,
+    # number of allowed positions
+    100,
+    )
+
+# polar angle parameters
+thetaParams = (
+    # smallest angle ( radians )
+    0.0,
+    # largest angle ( radians )
+    np.pi,
+    # number of allowed positions
+    100,
+)
+
+# azimuthal angle parameters
+phiParams = (
+    # smallest angle to allow ( radians )
+    0.0,
+    # largest angle to allow ( radians )
+    2 * np.pi,
+    # number of allowed positions
+    100,
+)
+
+# initial speed parameters
+speedParams = (
+    # minimum initial speed ( km/s )
+    0.0,
+    # maximum spped computed after placement in order to always start less than
+    #   escape velocity from the system
+    # number of allowed positions
+    100,
+)
