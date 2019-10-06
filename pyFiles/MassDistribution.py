@@ -239,18 +239,19 @@ def plotIMF( x, y, **kwargs ):
     xlim        = kwargs['xlim'       ] if 'xlim'        in kwargs else (x[0], x[-1])
 
     title = f"{IMFsolution.__name__} IMF PDF".replace( "_", "-" )
+    ylim = ( y[-1] - 1 , y[0] + 1 )
 
     fig = plt.figure( figsize=(15,15) )
 
-    plt.hist( y )
     plt.title(  title                     , fontsize=24 )
     plt.xlabel( "Mass (M$_{\odot}$)"      , fontsize=20 )
     plt.ylabel( "N$_{star}$ / M$_{\odot}$", fontsize=20 )
 
-    plt.plot( x, y, linewidth=3  , color='b'               , label='PDF'                 )
-    plt.vlines( 0.08, y[0], y[-1], color='r', linestyle=':', label='Chandrasekhar limit' )
+    plt.plot( x, y, linewidth=3, color='b', label='PDF' )
+    plt.vlines( 0.08, *ylim, color='r', linestyle=':', label='Chandrasekhar limit', linewidth=3 )
 
     plt.xlim( *xlim )
+    plt.ylim( *ylim )
     plt.legend( loc='best' )
     plt.tight_layout()
     if grid: plt.grid( True )
@@ -310,6 +311,7 @@ if __name__ == "__main__":
     kwargs = {
         'save'      : True,
         'verbose'   : True,
+        'xlim'      : (-1,100),
     }
 
     x = IMFmass
@@ -317,4 +319,4 @@ if __name__ == "__main__":
 
     plotIMF( x, y, **kwargs )
     stellarMassWeights( x, y, **kwargs )
-    plotHist( **kwargs )
+    #plotBar( **kwargs )
