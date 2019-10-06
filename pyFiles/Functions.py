@@ -58,7 +58,26 @@ def findIdx( value, array ):
 # coordinate frames                                                             #
 #===============================================================================#
 
-def Rotate( *args, **kwargs ):
+def findCM( *args, **kwargs ):
+    """
+    use:
+
+    ============================================================================
+    input:          type:           description:
+    ============================================================================
+    args:           type:           description:
+
+    kwargs:         type:           description:
+    verbose         bool            flag to print, default = False
+
+    ============================================================================
+    output:         type:
+    ============================================================================
+    None            None
+    """
+    pass
+
+def rotate( *args, **kwargs ):
     """
     use:
 
@@ -215,6 +234,8 @@ def printDict( dictionary, **kwargs ):
     dictionary      dict            a dictionary to print
 
     kwargs:         type:           description:
+    message         str             message to print in header, default =
+                                    "dictionary"
     verbose         bool            whether to actually print or not.
                                     default = False
 
@@ -224,18 +245,19 @@ def printDict( dictionary, **kwargs ):
     None            None
     """
 
+    message = kwargs['message'] if 'message' in kwargs else "dictionary"
     verbose = kwargs['verbose'] if 'verbose' in kwargs else False
 
     if verbose:
 
         # package dictionary
-        results = [ "\n\tresults\n\tkey:\tvalue\n\t============="]
+        lines = [ "", f"{message}", "key:\tvalue", "=============" ]
         for key,value in dictionary.items():
             try:
-                results.append( f"\t{key}:\t{value:0.2f}" )
-            except ValueError:
-                results.append( f"\t{key}:\t{value}" )
-        printHeader( *results, **kwargs )
+                lines.append( f"{key}:\t{value:0.2f}" )
+            except:
+                lines.append( f"{key}:\t{value}" )
+        printHeader( *lines, **kwargs )
 
 def printHeader( *args, **kwargs ):
     """
@@ -247,7 +269,7 @@ def printHeader( *args, **kwargs ):
     input:          type:           description:
     ============================================================================
     args:           type:           description:
-    message(s)      str             each provided argument gets printed in the
+    line(s)         str             each provided argument gets printed in the
                                     header on a new line
 
     kwargs:         type:           description:
@@ -264,8 +286,43 @@ def printHeader( *args, **kwargs ):
 
     if verbose:
         printBreak( **kwargs )
-        for arg in args: print( arg )
+        for arg in args:
+            try:
+                print( f"\t{arg:0.2f}" )
+            except:
+                print( f"\t{arg}" )
         printBreak( **kwargs )
+
+def printList( list1, **kwargs ):
+    """
+    use:
+
+    ============================================================================
+    input:          type:           description:
+    ============================================================================
+    args:           type:           description:
+
+    kwargs:         type:           description:
+    message         str             message to print in header, default =
+                                    "List"
+    verbose         bool            whether to actually print or not.
+                                    default = False
+
+    ============================================================================
+    output:         type:
+    ============================================================================
+    None            None
+    """
+
+    message = kwargs['message'] if 'message' in kwargs else "List"
+    verbose = kwargs['verbose'] if 'verbose' in kwargs else False
+
+    if verbose:
+
+        # package dictionary
+        lines =  [ "", f"{message}", "=============" ]
+        lines += list1
+        printHeader( *lines, **kwargs )
 
 #===============================================================================#
 # random generator                                                              #

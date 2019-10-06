@@ -33,7 +33,7 @@ phis = np.linspace( *phiParams, endpoint=False )
 #===============================================================================#
 
 """
-I'm thinking of doing this implenting this whole sub-section in the Simulation
+I'm thinking of doing this implenting this whole file in the Simulation
 definition. I am thinking of doing a random walk starting from outer edges of
 the factor space and from the center of the factor space.
 
