@@ -13,6 +13,7 @@ from Input import IMFparams, IMFmass
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pdb
 
 #===============================================================================#
 # initial mass funtion solutions                                                #
@@ -128,10 +129,79 @@ def IMF( IMFparams, IMFmass, **kwargs ):
     IMFpdf          np.ndarray
     """
     IMFsolution = kwargs['IMFsolution'] if 'IMFsolution' in kwargs else Kroupa_Salpeter
-    IMFpdf = IMFsolution( IMFparams, IMFmass, **kwargs )
+    IMFpdf = IMFsolution( IMFparams, IMFmass )
     # normalize
     IMFpdf /= np.trapz( IMFpdf, x=IMFmass )
     return IMFpdf
+
+def plotBar( **kwargs ):
+    """
+    use:
+    plot histogram of PDF with defined spectral types
+
+    ============================================================================
+    input:          type:           description:
+    ============================================================================
+    args:           type:           description:
+    N               int             how many stars to plot distribution
+
+    kwargs:         type:           description:
+    grid            bool            flag to show grid on figure, default = False
+    IMFsolution     function        solution to use, default = Kroupa_Salpeter
+    N               int             number of star indicies to generate, default
+                                    = 1000
+    save            bool            flag to save plot, default = False
+    show            bool            flag to show plot, default = True
+    toFile          str             what to name the figure if saved,
+                                    default = 'IMF_PDF_hist'
+    verbose         bool            whether to print or not
+
+    ============================================================================
+    output:         type:
+    ============================================================================
+    None            None
+    """
+
+    grid        = kwargs['grid'       ] if 'grid'        in kwargs else False
+    IMFsolution = kwargs['IMFsolution'] if 'IMFsolution' in kwargs else Kroupa_Salpeter
+    N           = kwargs['N'          ] if 'N'           in kwargs else 1000
+    save        = kwargs['save'       ] if 'save'        in kwargs else False
+    show        = kwargs['show'       ] if 'show'        in kwargs else False
+    toFile      = kwargs['toFile'     ] if 'toFile'      in kwargs else "IMF_PDF_bar"
+
+    # generate star indicies
+    N1 = generateStarIndices( N, **kwargs )
+    # find the counts for each population of the generated sample
+    N1 = np.bincount( N1 )
+    # display counts in decimal percent
+    N1 = N1 / N
+    # convert to actual percent
+    N1 *= 100
+
+    title = f"{IMFsolution.__name__} Generated Sample".replace( "_", "-" )
+    labels = [ 'O', 'B', 'A', 'F', 'G', 'K', 'M' ]
+
+    fig = plt.figure( figsize=(15,15) )
+
+    plt.title(  title           , fontsize=24 )
+    plt.xlabel( "Spectral Class", fontsize=20 )
+    plt.ylabel( "Percent (%)"   , fontsize=20 )
+
+    plt.bar( np.arange(7), N1, tick_label=labels )
+
+    for idx,label in enumerate( labels ):
+        plt.annotate(
+            f"{label}: {N1[idx]:0.1f} %"         ,
+            xy       = ( idx - 0.3, N1[idx] + 2 ),
+            color    = 'r'                       ,
+            fontsize = 20
+        )
+
+    plt.tight_layout()
+    if grid: plt.grid( True )
+
+    if show: plt.show()
+    if save: fun.saveFigure( toFile, fig, **kwargs )
 
 def plotIMF( x, y, **kwargs ):
     """
@@ -182,55 +252,6 @@ def plotIMF( x, y, **kwargs ):
 
     plt.xlim( *xlim )
     plt.legend( loc='best' )
-    plt.tight_layout()
-    if grid: plt.grid( True )
-
-    if show: plt.show()
-    if save: fun.saveFigure( toFile, fig, **kwargs )
-
-def plotHist( N, **kwargs ):
-    """
-    use:
-    plot histogram of PDF with defined spectral types
-
-    ============================================================================
-    input:          type:           description:
-    ============================================================================
-    args:           type:           description:
-    N               int             how many stars to plot distribution
-
-    kwargs:         type:           description:
-    grid            bool            flag to show grid on figure, default = True
-    IMFsolution     function        solution to use, default = Kroupa_Salpeter
-    save            bool            flag to save plot, default = False
-    show            bool            flag to show plot, default = True
-    toFile          str             what to name the figure if saved,
-                                    default = 'IMF_PDF_hist'
-    verbose         bool            whether to print or not
-
-    ============================================================================
-    output:         type:
-    ============================================================================
-    None            None
-    """
-
-    grid        = kwargs['grid'       ] if 'grid'        in kwargs else True
-    IMFsolution = kwargs['IMFsolution'] if 'IMFsolution' in kwargs else Kroupa_Salpeter
-    save        = kwargs['save'       ] if 'save'        in kwargs else False
-    show        = kwargs['show'       ] if 'show'        in kwargs else False
-    toFile      = kwargs['toFile'     ] if 'toFile'      in kwargs else "IMF_PDF_hist"
-
-    title = f"{IMFsolution.__name__} Histogram".replace( "_", "-" )
-    y     = generateStarIndices( N, **kwargs )
-
-    fig = plt.figure( figsize=(15,15) )
-
-    plt.title(  title               , fontsize=24 )
-    plt.xlabel( "Mass (M$_{\odot}$)", fontsize=20 )
-    plt.ylabel( "Count (N)"         , fontsize=20 )
-
-    plt.hist( y )
-
     plt.tight_layout()
     if grid: plt.grid( True )
 
@@ -292,8 +313,8 @@ if __name__ == "__main__":
     }
 
     x = IMFmass
-    y = IMF( IMFparams, IMFmass, **kwargs )
+    y = IMF( IMFparams, IMFmass )
 
     plotIMF( x, y, **kwargs )
     stellarMassWeights( x, y, **kwargs )
-    plotHist( 1000, **kwargs )
+    plotHist( **kwargs )
