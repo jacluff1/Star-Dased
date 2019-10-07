@@ -31,3 +31,12 @@ class MLbase:
     #===========================================================================#
     # semi-private methods                                                      #
     #===========================================================================#
+
+    def __generateEmptyData( self, **kwargs ):
+        pass
+
+    def __generateFactorSpace( self, *args, **kwargs ):
+        pass
+
+    def __generateSampleFactors( self, **kwargs ):
+        pass
