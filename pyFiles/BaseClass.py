@@ -10,6 +10,7 @@ from Input import radiusParams, thetaParams, phiParams
 # import external dependencies                                                  #
 #===============================================================================#
 
+from copy import deepcopy
 import numpy as np
 import pandas as pd
 
@@ -61,10 +62,19 @@ class BaseClass:
 
         # generating factor space every time, will alow factor space to be
         # updated at any time without destroying previous results
-        self._generateFactorSpace( **kwargs1 )
+        self.__generateFactorSpace( **kwargs1 )
+
+        # only generate sample factors if it doesn't already have them
+        if not hasattr( self, 'sampleFactors_' ):
+            self.__generateSampleFactors( **kwargs1 )
 
         # only generate metadata if it doesn't already exist
-        if not hasattr( self, 'factors_' ): self._generateMetaData( *args, **kwargs1 )
+        if not hasattr( self, 'factors_' ):
+            self._generateMetaData( *args, **kwargs1 )
+
+        # only generate empty data if none exist
+        if not hasattr( self, 'data_' ):
+            self.__generateEmptyData( **kwargs1 )
 
         # only generate a run schedule if it doesn't already exist
         if not hasattr( self, 'sample_' ):
@@ -76,6 +86,8 @@ class BaseClass:
 
     #===========================================================================#
     # public methods                                                            #
+    # methods below should be safe to use in any child class because it has     #
+    # whatever it needs given to it in BaseClass construction.                  #
     #===========================================================================#
 
     def loadState( self, **kwargs ):
@@ -121,6 +133,9 @@ class BaseClass:
 
     #===========================================================================#
     # semi-protected methods                                                    #
+    # any methods defined here will be able to be used directly by its          #
+    # children, make sure any attributes added by the methods below are present #
+    # in the child class.                                                       #
     #===========================================================================#
 
     def _dict2attributes( self, dictionary, **kwargs ):
@@ -146,46 +161,6 @@ class BaseClass:
             for key,value in dictionary.items():
                 setattr( self, key + '_', value )
 
-    def _generateFactorSpace( self, **kwargs ):
-        """
-        use:
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-        self.factorSpace_ = {
-            # having radii in exponential space will allow denser sampling
-            # at small radii and sparser sampling at the upper limits of radii
-            # this assumes that smaller radii from CM is more likely.
-            'radius'    : np.exp( -np.linspace(
-                np.log( radiusParams[0] ),
-                np.log( radiusParams[1] ),
-                radiusParams[2]
-            ) )                                                         ,
-            # uniform spacing of polar angles assumes all angles are equally
-            # likely
-            'theta'     : np.linspace( *thetaParams, endpoint=False )   ,
-            # uniform spacing of azimuthal angles assumes all angles are equally
-            # likely
-            'phi'       : np.linspace( *phiParams  , endpoint=False )   ,
-        }
-
-        lines = [
-            "", 'Factor Space:', "", f"radius:\t{radiusParams}",
-            f"theta:\t{thetaParams}", f"phi:\t{phiParams}"
-        ]
-        fun.printHeader( *lines, **kwargs )
-
     def _generateMetaData( self, *args, **kwargs ):
         """
         use:
@@ -208,7 +183,16 @@ class BaseClass:
         """
 
         # start with the column names
-        colNames = [ name for name in args ]
+        if len( args ) > 0:
+            colNames = [ name for name in args ]
+        else:
+            colNames = [ 'runTime' ]
+
+        # add the estimators
+        self.estimators_ = deepcopy( colNames )
+
+        # add the number of estimators
+        self.numEstimators_ = len( self.estimators_ )
 
         # fill in the columns by adding radius, theta, phi, and mass, for
         # all stars for both initial and final times
@@ -225,16 +209,10 @@ class BaseClass:
         self.columns_ = colNames
 
         # add the factors
-        self.factors_ = colNames[ len( args ) : ]
+        self.factors_ = colNames[ self.numEstimators_ : ]
 
         # add the number of factors
         self.numFactors_ = len( self.factors_ )
-
-        # add estimator columns
-        self.estimator_ = colNames[ : len( args ) ]
-
-        # add the number of estimator factors
-        self.numEstimators_ = len( self.estimator_ )
 
     def _generateSample( self, *args, **kwargs ):
         """
@@ -258,28 +236,6 @@ class BaseClass:
         ============================================================================
         None            None
         """
-
-        # find initial factors from list of factors
-        self.sampleFactors_ = []
-        for x in self.factors_:
-            # select string of tuple only
-            x1 = x[ x.find( "_" ) + 1 : ]
-            # replace '(' with whitespace
-            x1 = x1.replace( "(", "" )
-            # replace ')' with whitespace
-            x1 = x1.replace( ")", "" )
-            # split string on commas into list of strings
-            x1 = x1.split( "," )
-            # convert into a tuple of int
-            x1 = tuple([ int( x2 ) for x2 in x1 ])
-            # only select tuples of length 2: mass is randomly selected
-            if len( x1 ) == 2:
-                # only select where the second tuple is 0 (-1 signifies ending
-                # value)
-                if x1[ 1 ] == 0:
-                    # append original factor column
-                    self.sampleFactors_.append( x )
-
 
         # create an empty pd.DataFrame
         df = pd.DataFrame(
@@ -307,7 +263,7 @@ class BaseClass:
 
         self.sample_ = df
 
-    def _randomWalk( self, *args , **kwargs ):
+    def _randomWalk( self, *args, **kwargs ):
         """
         use:
 
@@ -324,8 +280,75 @@ class BaseClass:
         ============================================================================
         None            None
         """
+
+        # set variables from key word arguments
+        step = kwargs['step'] if 'step' in kwargs else True
+
+        # if a random step is needed (ie all steps except the first in a sample
+        # scenario) generate a random step
+        if step:
+
+            while True:
+
+                # randomly pick to either decrement (0) or incremenet (1)
+                increment = bool( np.random.randint(2) )
+
+                if increment:
+                    # create a mask for all the initial factors that can be incremented
+                    mask = []
+                    pass
+
+                else:
+                    # create a mask for all the initial factors that can be decrimented
+                    pass
         pass
+
+    def _setInitialFactorState( self, *args, **kwargs ):
+        """
+        use:
+
+        ============================================================================
+        input:          type:           description:
+        ============================================================================
+        args:           type:           description:
+        sampleIdx       int             row number from self.sample_ used to set
+                                        state
+
+        kwargs:         type:           description:
+        verbose         bool            flag to print, default = False
+
+        ============================================================================
+        output:         type:
+        ============================================================================
+        None            None
+        """
+
+        # set variable from args
+        if len( args ) == 1:
+            sampleIdx = args[0]
+        elif len( args ) == 0:
+            sampleIdx = 0
+
+        # set the initial factor state by extracting factor space indicies from
+        # designated row in sample
+        self.factorState_ = {
+            col : self.sample_.loc[ sampleIdx, col ] for col in self.sampleFactors_
+        }
+
+        # also set/reset random walk counter to 0
+        self.randomWalkCounter = 0
 
     #===========================================================================#
     # semi-private methods                                                      #
+    # any method here would have to be implemented separately in the specific   #
+    # class definition inheriting it.                                           #
     #===========================================================================#
+
+    def __generateEmptyData( self ):
+        NotImplemented
+
+    def __generateFactorSpace( self, **kwargs ):
+        NotImplemented
+
+    def __generateSampleFactors( self, **kwargs ):
+        NotImplemented
