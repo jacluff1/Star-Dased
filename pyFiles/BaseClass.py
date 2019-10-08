@@ -13,6 +13,7 @@ from Input import radiusParams, thetaParams, phiParams
 from copy import deepcopy
 import numpy as np
 import pandas as pd
+import pdb
 
 #===============================================================================#
 # BaseClass definition                                                          #
@@ -62,23 +63,29 @@ class BaseClass:
 
         # generating factor space every time, will alow factor space to be
         # updated at any time without destroying previous results
-        self.__generateFactorSpace( **kwargs1 )
-
-        # only generate sample factors if it doesn't already have them
-        if not hasattr( self, 'sampleFactors_' ):
-            self.__generateSampleFactors( **kwargs1 )
+        self._generateFactorSpace( **kwargs1 )
 
         # only generate metadata if it doesn't already exist
         if not hasattr( self, 'factors_' ):
             self._generateMetaData( *args, **kwargs1 )
 
-        # only generate empty data if none exist
-        if not hasattr( self, 'data_' ):
-            self.__generateEmptyData( **kwargs1 )
+        # only generate sample factors if it doesn't already have them
+        if not hasattr( self, 'sampleFactors_' ):
+            self._generateSampleFactors( **kwargs1 )
 
         # only generate a run schedule if it doesn't already exist
         if not hasattr( self, 'sample_' ):
             self._generateSample( **kwargs1 )
+
+        # only generate empty data if none exist
+        if not hasattr( self, 'data_' ):
+            self._generateEmptyData( **kwargs1 )
+
+        # only add if it doesn't already exist
+        if not hasattr( self, 'sampleRowIdx_' ): self.sampleRowIdx_ = 0
+
+        # only add if it doesn't already exist
+        if not hasattr( self, 'runComplete_' ): self.runComplete_ = False
 
         # add any remaining kwargs as attributes, will override previous state
         # if any keys conflict
@@ -86,8 +93,9 @@ class BaseClass:
 
     #===========================================================================#
     # public methods                                                            #
-    # methods below should be safe to use in any child class because it has     #
-    # whatever it needs given to it in BaseClass construction.                  #
+    # any methods defined here will be able to be used directly by its          #
+    # children, make sure any attributes added by the methods below are present #
+    # in the child class.                                                       #
     #===========================================================================#
 
     def loadState( self, **kwargs ):
@@ -112,9 +120,42 @@ class BaseClass:
         state = fun.fromPickle( self.name_, **kwargs )
         self._dict2attributes( state, message='Loading State:', **kwargs )
 
+    def run( self, *args, **kwargs ):
+        """
+        use:
+        Method shall include the general instructions to populate self.data_,
+        including running through each random walk scenario set up in the
+        sample. For sim models this means generating sim data; for meta models
+        this means generating results from different model hyper-parameters,
+        which is used to find the best set of hyper-parameters for the meta
+        model.
+
+        ============================================================================
+        input:          type:           description:
+        ============================================================================
+        args:           type:           description:
+
+        kwargs:         type:           description:
+        verbose         bool            flag to print, default = False
+
+        ============================================================================
+        output:         type:
+        ============================================================================
+        None            None
+        """
+
+        while not self.runComplete_:
+            self._runScenario()
+            self._updateFactorState()
+            self.randomWalk()
+            self.saveState()
+
     def saveState( self , **kwargs ):
         """
         use:
+        saves the current state of the model instance into a pickle, which will
+        automatically be loaded up by the constructor next time it is
+        instantiated.
 
         ========================================================================
         input:          type:           description:
@@ -130,6 +171,11 @@ class BaseClass:
         None            None
         """
         fun.toPickle( self.name_, self.__dict__, **kwargs )
+
+    #===========================================================================#
+    # public methods                                                            #
+    # any methods defined here need to be implemnted in the child class         #
+    #===========================================================================#
 
     #===========================================================================#
     # semi-protected methods                                                    #
@@ -184,7 +230,7 @@ class BaseClass:
 
         # start with the column names
         if len( args ) > 0:
-            colNames = [ name for name in args ]
+            colNames = list( args )
         else:
             colNames = [ 'runTime' ]
 
@@ -240,32 +286,43 @@ class BaseClass:
         # create an empty pd.DataFrame
         df = pd.DataFrame(
             index   = np.arange( 3 ),
-            columns = [ 'started', 'finished' ] + self.sampleFactors_
+            columns = self.sampleFactors_.column
         )
 
-        # make sure all started and finished = 0
-        df.started  = 0
-        df.finished = 0
-
         # first in the sample is the centroid
-        for col in self.sampleFactors_:
+        for col in self.sampleFactors_.column:
             if   'radius' in col:
                 idx = radiusParams[2] // 2
             elif 'theta'  in col:
                 idx = thetaParams[2]  // 2
             elif 'phi'    in col:
                 idx = phiParams[2]    // 2
+            else:
+                pdb.set_trace()
             df.loc[ 0, col ] = idx
         # second in the sample is all minima
-        for col in self.sampleFactors_: df.loc[ 1 , col ] = 0
+        for col in self.sampleFactors_.column: df.loc[ 1 , col ] = 0
         # third in the sample is all maxima
-        for col in self.sampleFactors_: df.loc[ 2 , col ] = -1
+        for col in self.sampleFactors_.column: df.loc[ 2 , col ] = -1
 
         self.sample_ = df
 
     def _randomWalk( self, *args, **kwargs ):
         """
         use:
+        This method checks that randomWalkCounter <= counterLimit. if
+        randomWalkCounter > counterLimit, mark the current row in sample_ as
+        completed, _setInitialFactorState, and skip the rest of randomWalk.
+
+        if marking current sample as completed, also check if there are any
+        rows in sampe_ not marked completed. If all are completed, set
+        runComplete_ to True.
+
+        randomly increment or decrement the current state by one index in the
+        factor space of a random initial factor that can be incremented/
+        decrimented. If there are no factors that can be incremented, a random
+        factor will be decremented; if there are no factors that can be
+        incremented, a random factor will be decremented.
 
         ============================================================================
         input:          type:           description:
@@ -273,6 +330,9 @@ class BaseClass:
         args:           type:           description:
 
         kwargs:         type:           description:
+        counterLimit    int             if randomWalkCounter reaches this number
+                                        reset this number to 0 and set inital
+                                        state to the next sample. Default = 30
         verbose         bool            flag to print, default = False
 
         ============================================================================
@@ -281,31 +341,36 @@ class BaseClass:
         None            None
         """
 
-        # set variables from key word arguments
-        step = kwargs['step'] if 'step' in kwargs else True
+        # set variables by key word arguments
+        counterLimit = kwargs['counterLimit'] if 'counterLimit' in kwargs else 30
 
-        # if a random step is needed (ie all steps except the first in a sample
-        # scenario) generate a random step
-        if step:
+        # check that randomWalkCounter <= counterLimit
+        if self.randomWalkCounter_ > counterLimit:
+            self._setInitialFactorState( **kwargs )
+            return
 
-            while True:
+        while True:
 
-                # randomly pick to either decrement (0) or incremenet (1)
-                increment = bool( np.random.randint(2) )
+            # randomly pick to either decrement (0) or incremenet (1)
+            increment = bool( np.random.randint(2) )
 
-                if increment:
-                    # create a mask for all the initial factors that can be incremented
-                    mask = []
-                    pass
+            if increment:
+                # create a mask for all the initial factors that can be incremented
+                mask = []
+                NotImplemented
 
-                else:
-                    # create a mask for all the initial factors that can be decrimented
-                    pass
-        pass
+            else:
+                # create a mask for all the initial factors that can be decrimented
+                NotImplemented
 
     def _setInitialFactorState( self, *args, **kwargs ):
         """
         use:
+        choose a sample from the hypercube of factor space of initial
+        parameters: ( radius, polar angle, azimuthal angle ) for each star.
+
+        if any arg is provided, assume it is the row index in sample_ to set
+        state to. If no arg is provided, use the sampleRowIdx_
 
         ============================================================================
         input:          type:           description:
@@ -323,32 +388,165 @@ class BaseClass:
         None            None
         """
 
-        # set variable from args
+        # determine the row to use in sample_ to set state to
         if len( args ) == 1:
             sampleIdx = args[0]
         elif len( args ) == 0:
-            sampleIdx = 0
+            sampleIdx = self.sampleRowIdx_
 
         # set the initial factor state by extracting factor space indicies from
         # designated row in sample
         self.factorState_ = {
-            col : self.sample_.loc[ sampleIdx, col ] for col in self.sampleFactors_
+            col : self.sample_.loc[ sampleIdx, col ] for col in self.sampleFactors_.column
         }
 
-        # also set/reset random walk counter to 0
-        self.randomWalkCounter = 0
+        # set/reset random walk counter to 0
+        self.randomWalkCounter_ = 0
+
+        # increment sampleRowIdx_, if it was used
+        if len( args ) == 0: self.sampleRowIdx_ += 1
+
+    #===========================================================================#
+    # semi-protected                                                            #
+    # any methods defined here need to be implemnted in the child class         #
+    #===========================================================================#
+
+    def _generateEmptyData( self ):
+        """
+        use:
+        The child class needs to define this class for itself. However, it
+        shall add an empty pd.DataFrame, accessed by self.data_. the DataFrame
+        will hold all the generated data from all the random walks from all the
+        initial states defined in the generated sample ( found in self.sample_ )
+
+        ============================================================================
+        input:          type:           description:
+        ============================================================================
+        args:           type:           description:
+
+        kwargs:         type:           description:
+        verbose         bool            flag to print, default = False
+
+        ============================================================================
+        output:         type:
+        ============================================================================
+        None            None
+        """
+
+        NotImplemented
+
+    def _generateFactorSpace( self, **kwargs ):
+        """
+        use:
+        The child class needs to define this class for itself. However, it
+        shall add a dictionary, accessed by self.factorSpace_, where the keys
+        are the sampleFactors and the values are np.arrays of all allowed values
+        included in the factor space.
+
+        The keys in sampleFactors_ must remain constant, but it is allowed to
+        adjust the factor space (for example, expand the factor space, narrow it
+        down around a percieved richer space, etc..). Every time the model is
+        instantiated, it will retain its previous runs and re-set up the factor
+        space it is considering.
+
+        ============================================================================
+        input:          type:           description:
+        ============================================================================
+        args:           type:           description:
+
+        kwargs:         type:           description:
+        verbose         bool            flag to print, default = False
+
+        ============================================================================
+        output:         type:
+        ============================================================================
+        None            None
+        """
+
+        NotImplemented
+
+    def _generateSampleFactors( self, **kwargs ):
+        """
+        use:
+        The child class needs to define this class for itself. However, it
+        shall add a pd.DataFrame, accessed by self.sample_ that has columns:
+        [ 'factor', 'minIdx', 'midIdx', 'maxIdx' ]
+        The rows shall be the factors being considered in the hypercube defining
+        the sample/factor space.
+
+        ============================================================================
+        input:          type:           description:
+        ============================================================================
+        args:           type:           description:
+
+        kwargs:         type:           description:
+        verbose         bool            flag to print, default = False
+
+        ============================================================================
+        output:         type:
+        ============================================================================
+        None            None
+        """
+
+        NotImplemented
+
+    def _runScenario( self, **kwargs ):
+        """
+        use:
+        This method needs to be defined in child class; however this
+        method shall:
+
+        1) use the current factorState to calculate/generate any necessary
+        additional input
+        2) run scenario
+        3) record all scenario input output in self.data_
+
+        ============================================================================
+        input:          type:           description:
+        ============================================================================
+        args:           type:           description:
+
+        kwargs:         type:           description:
+        verbose         bool            flag to print, default = False
+
+        ============================================================================
+        output:         type:
+        ============================================================================
+        None            None
+        """
+
+        NotImplemented
+
+    def _updateFactorState( self, *args, **kwargs ):
+        """
+        use:
+        This method needs to be defined in child class; however,
+        This method shall look at the last entry ( the current scenario that
+        just completed ) and the entry before that, whichever outcome is better
+        and either keep the current stateFactor ( the previous result was
+        better ), or it will update its stateFactor by taking the sampleFactor
+        values from the last row ( the current scenario ).
+
+        if keeping current state, increment randomWalkCounter.
+
+        ============================================================================
+        input:          type:           description:
+        ============================================================================
+        args:           type:           description:
+
+        kwargs:         type:           description:
+        verbose         bool            flag to print, default = False
+
+        ============================================================================
+        output:         type:
+        ============================================================================
+        None            None
+        """
+
+        NotImplemented
 
     #===========================================================================#
     # semi-private methods                                                      #
-    # any method here would have to be implemented separately in the specific   #
-    # class definition inheriting it.                                           #
+    # any children wanting to use methods below would need a super() to use     #
+    # in whole or in part                                                       #
     #===========================================================================#
-
-    def __generateEmptyData( self ):
-        NotImplemented
-
-    def __generateFactorSpace( self, **kwargs ):
-        NotImplemented
-
-    def __generateSampleFactors( self, **kwargs ):
-        NotImplemented
