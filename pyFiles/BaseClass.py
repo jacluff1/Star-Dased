@@ -311,8 +311,8 @@ class BaseClass:
         """
         use:
         This method checks that randomWalkCounter <= counterLimit. if
-        randomWalkCounter > counterLimit, mark the current row in sample_ as
-        completed, _setInitialFactorState, and skip the rest of randomWalk.
+        randomWalkCounter > counterLimit, increment sampleRowIdx,
+        _setInitialFactorState, and skip the rest of randomWalk.
 
         if marking current sample as completed, also check if there are any
         rows in sampe_ not marked completed. If all are completed, set
@@ -346,22 +346,43 @@ class BaseClass:
 
         # check that randomWalkCounter <= counterLimit
         if self.randomWalkCounter_ > counterLimit:
+            self.sampleRowIdx_ += 1
             self._setInitialFactorState( **kwargs )
             return
 
+        # randomly pick to either decrement (0) or incremenet (1)
+        increment = bool( np.random.randint(2) )
+
         while True:
 
-            # randomly pick to either decrement (0) or incremenet (1)
-            increment = bool( np.random.randint(2) )
-
             if increment:
-                # create a mask for all the initial factors that can be incremented
-                mask = []
-                NotImplemented
+                # create a list of all factors that can incremented
+                factors = []
+                for factor,idx in self.factorState_.items():
+                    maxIdx = self.sampleFactors_[ self.sampleFactors_.column == factor ].maxIdx.item()
+                    if idx < maxIdx: factors.append( factor )
 
             else:
-                # create a mask for all the initial factors that can be decrimented
-                NotImplemented
+                # create a list of all factors that can be decremented
+                factors = []
+                for factor, idx in self.factorState_.items():
+                    minIdx = self.sampleFactors_[ self.sampleFactors_.column == factor ].minIdx.item()
+                    if idx > minIdx: factors.append( factor )
+
+            # if no factors found, switch increment and try again
+            if len( factors ) == 0:
+                increment = not increment
+                continue
+            else:
+                break
+
+        # select a random factor from factors
+        factor = factors[ np.random.randint( len( factors ) + 1 ) ]
+
+        if increment:
+            self.factorState_[ factor ] += 1
+        else:
+            self.factorState_[ factor ] -= 1
 
     def _setInitialFactorState( self, *args, **kwargs ):
         """
@@ -369,8 +390,11 @@ class BaseClass:
         choose a sample from the hypercube of factor space of initial
         parameters: ( radius, polar angle, azimuthal angle ) for each star.
 
-        if any arg is provided, assume it is the row index in sample_ to set
-        state to. If no arg is provided, use the sampleRowIdx_
+        if any arg is provided, set sampleRowIdx to arg, otherwise use the
+        current sampleRowIdx. Set the state based on the the row in sample_
+        designated by sampleRowIdx.
+
+        reset randomWalkCounter to 0.
 
         ============================================================================
         input:          type:           description:
@@ -389,22 +413,16 @@ class BaseClass:
         """
 
         # determine the row to use in sample_ to set state to
-        if len( args ) == 1:
-            sampleIdx = args[0]
-        elif len( args ) == 0:
-            sampleIdx = self.sampleRowIdx_
+        if len( args ) == 1: self.sampleRowIdx_ = args[0]
 
         # set the initial factor state by extracting factor space indicies from
         # designated row in sample
         self.factorState_ = {
-            col : self.sample_.loc[ sampleIdx, col ] for col in self.sampleFactors_.column
+            col : self.sample_.loc[ self.sampleRowIdx_, col ] for col in self.sampleFactors_.column
         }
 
         # set/reset random walk counter to 0
         self.randomWalkCounter_ = 0
-
-        # increment sampleRowIdx_, if it was used
-        if len( args ) == 0: self.sampleRowIdx_ += 1
 
     #===========================================================================#
     # semi-protected                                                            #
@@ -527,7 +545,8 @@ class BaseClass:
         better ), or it will update its stateFactor by taking the sampleFactor
         values from the last row ( the current scenario ).
 
-        if keeping current state, increment randomWalkCounter.
+        if keeping current state, increment randomWalkCounter; if using new
+        state, reset randomWalkCounter to 0
 
         ============================================================================
         input:          type:           description:
@@ -550,3 +569,11 @@ class BaseClass:
     # any children wanting to use methods below would need a super() to use     #
     # in whole or in part                                                       #
     #===========================================================================#
+
+#===============================================================================#
+# main                                                                          #
+#===============================================================================#
+
+if __name__ == "__main__":
+    sim = Simulation()
+    sim.run()
