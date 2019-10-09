@@ -57,6 +57,7 @@ class BaseClass:
         # take out any key word arguments which aren't desired as attributes
         kwargs1 = {}
         if 'verbose' in kwargs: kwargs1['verbose'] = kwargs.pop( 'verbose' )
+        numReplicates = kwargs.pop( 'numReplicates' ) if 'numReplicates' in kwargs else 20
 
         # look for any previously saved state and load it if it exists
         self.loadState( **kwargs1 )
@@ -69,11 +70,7 @@ class BaseClass:
         if not hasattr( self, 'factors_' ):
             self._generateMetaData( *args, **kwargs1 )
 
-        # only generate sample factors if it doesn't already have them
-        if not hasattr( self, 'sampleFactors_' ):
-            self._generateSampleFactors( **kwargs1 )
-
-        # only generate a run schedule if it doesn't already exist
+        # only generate a sample if it doesn't already exist
         if not hasattr( self, 'sample_' ):
             self._generateSample( **kwargs1 )
 
@@ -81,10 +78,17 @@ class BaseClass:
         if not hasattr( self, 'data_' ):
             self._generateEmptyData( **kwargs1 )
 
-        # only add if it doesn't already exist
+        # only add the number of replicates if it doesn't already exist
+        if not hasattr( self, 'numReplicates_' ):
+            self.numReplicates_ = numReplicates
+
+        # only add Monte Carlo replicate counter if it doesn't exist
+        if not hasattr( self, 'replicateCounter_' ): self.replicateCounter_ = 0
+
+        # only add sample row index it doesn't already exist
         if not hasattr( self, 'sampleRowIdx_' ): self.sampleRowIdx_ = 0
 
-        # only add if it doesn't already exist
+        # only add flag for run complete it doesn't already exist
         if not hasattr( self, 'runComplete_' ): self.runComplete_ = False
 
         # add any remaining kwargs as attributes, will override previous state
@@ -120,36 +124,6 @@ class BaseClass:
         state = fun.fromPickle( self.name_, **kwargs )
         self._dict2attributes( state, message='Loading State:', **kwargs )
 
-    def run( self, *args, **kwargs ):
-        """
-        use:
-        Method shall include the general instructions to populate self.data_,
-        including running through each random walk scenario set up in the
-        sample. For sim models this means generating sim data; for meta models
-        this means generating results from different model hyper-parameters,
-        which is used to find the best set of hyper-parameters for the meta
-        model.
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-
-        while not self.runComplete_:
-            self._runScenario()
-            self._updateFactorState()
-            self.randomWalk()
-            self.saveState()
-
     def saveState( self , **kwargs ):
         """
         use:
@@ -176,6 +150,29 @@ class BaseClass:
     # public methods                                                            #
     # any methods defined here need to be implemnted in the child class         #
     #===========================================================================#
+
+    def run( self, *args, **kwargs ):
+        """
+        use:
+        This method runs through each treatment in sample_ and terminates when
+        __runTreatment() sets runComplete_ = True
+
+        ============================================================================
+        input:          type:           description:
+        ============================================================================
+        args:           type:           description:
+
+        kwargs:         type:           description:
+        verbose         bool            flag to print, default = False
+
+        ============================================================================
+        output:         type:
+        ============================================================================
+        None            None
+        """
+
+        while not self.runComplete_:
+            self.__runTreatment()
 
     #===========================================================================#
     # semi-protected methods                                                    #
@@ -263,11 +260,10 @@ class BaseClass:
     def _generateSample( self, *args, **kwargs ):
         """
         use:
-        generates a pd.DataFrame that the samples for random walk scenarios.
+        choose the method for generating a treatment sample.
 
-        right now only includes starting at the extrema ( 2 ) and at the
-        centroid ( 1 ). Perhaps look into a latin hypercube or some other
-        sampling technique.
+        Current Options:
+        latin (needs implementing)
 
         ============================================================================
         input:          type:           description:
@@ -275,6 +271,7 @@ class BaseClass:
         args:           type:           description:
 
         kwargs:         type:           description:
+        sampleMethod    str             used to choose sampling method
         verbose         bool            flag to print, default = False
 
         ============================================================================
@@ -283,146 +280,34 @@ class BaseClass:
         None            None
         """
 
-        # create an empty pd.DataFrame
-        df = pd.DataFrame(
-            index   = np.arange( 3 ),
-            columns = self.sampleFactors_.column
-        )
+        method = kwargs['sampleMethod'] if 'sampleMethod' in kwargs else 'latin'
 
-        # first in the sample is the centroid
-        for col in self.sampleFactors_.column:
-            if   'radius' in col:
-                idx = radiusParams[2] // 2
-            elif 'theta'  in col:
-                idx = thetaParams[2]  // 2
-            elif 'phi'    in col:
-                idx = phiParams[2]    // 2
-            else:
-                pdb.set_trace()
-            df.loc[ 0, col ] = idx
-        # second in the sample is all minima
-        for col in self.sampleFactors_.column: df.loc[ 1 , col ] = 0
-        # third in the sample is all maxima
-        for col in self.sampleFactors_.column: df.loc[ 2 , col ] = -1
+        if method == 'latin':
+            self.__generateLatinHCsample( *args, **kwargs )
 
-        self.sample_ = df
-
-    def _randomWalk( self, *args, **kwargs ):
-        """
-        use:
-        This method checks that randomWalkCounter <= counterLimit. if
-        randomWalkCounter > counterLimit, increment sampleRowIdx,
-        _setInitialFactorState, and skip the rest of randomWalk.
-
-        if marking current sample as completed, also check if there are any
-        rows in sampe_ not marked completed. If all are completed, set
-        runComplete_ to True.
-
-        randomly increment or decrement the current state by one index in the
-        factor space of a random initial factor that can be incremented/
-        decrimented. If there are no factors that can be incremented, a random
-        factor will be decremented; if there are no factors that can be
-        incremented, a random factor will be decremented.
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        counterLimit    int             if randomWalkCounter reaches this number
-                                        reset this number to 0 and set inital
-                                        state to the next sample. Default = 30
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-
-        # set variables by key word arguments
-        counterLimit = kwargs['counterLimit'] if 'counterLimit' in kwargs else 30
-
-        # check that randomWalkCounter <= counterLimit
-        if self.randomWalkCounter_ > counterLimit:
-            self.sampleRowIdx_ += 1
-            self._setInitialFactorState( **kwargs )
-            return
-
-        # randomly pick to either decrement (0) or incremenet (1)
-        increment = bool( np.random.randint(2) )
-
-        while True:
-
-            if increment:
-                # create a list of all factors that can incremented
-                factors = []
-                for factor,idx in self.factorState_.items():
-                    maxIdx = self.sampleFactors_[ self.sampleFactors_.column == factor ].maxIdx.item()
-                    if idx < maxIdx: factors.append( factor )
-
-            else:
-                # create a list of all factors that can be decremented
-                factors = []
-                for factor, idx in self.factorState_.items():
-                    minIdx = self.sampleFactors_[ self.sampleFactors_.column == factor ].minIdx.item()
-                    if idx > minIdx: factors.append( factor )
-
-            # if no factors found, switch increment and try again
-            if len( factors ) == 0:
-                increment = not increment
-                continue
-            else:
-                break
-
-        # select a random factor from factors
-        factor = factors[ np.random.randint( len( factors ) + 1 ) ]
-
-        if increment:
-            self.factorState_[ factor ] += 1
         else:
-            self.factorState_[ factor ] -= 1
+            raise KeyError, f"{mehod} hasn't been defined yet!"
 
-    def _setInitialFactorState( self, *args, **kwargs ):
+    def _runTreatment( self, **kwargs ):
         """
-        use:
-        choose a sample from the hypercube of factor space of initial
-        parameters: ( radius, polar angle, azimuthal angle ) for each star.
-
-        if any arg is provided, set sampleRowIdx to arg, otherwise use the
-        current sampleRowIdx. Set the state based on the the row in sample_
-        designated by sampleRowIdx.
-
-        reset randomWalkCounter to 0.
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-        sampleIdx       int             row number from self.sample_ used to set
-                                        state
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
+        run Monte Carlo scenarios for the given replicate
         """
 
-        # determine the row to use in sample_ to set state to
-        if len( args ) == 1: self.sampleRowIdx_ = args[0]
+        # extract args from sample, given sample row index
+        args = [ self.sample_.loc[ self.sampleRowIdx_, col ] for col in self.factors_ ]
 
-        # set the initial factor state by extracting factor space indicies from
-        # designated row in sample
-        self.factorState_ = {
-            col : self.sample_.loc[ self.sampleRowIdx_, col ] for col in self.sampleFactors_.column
-        }
+        while self.replicateCounter_ < self.numReplicates_:
+            # run monte carlo scenario
+            self._runMonteCarloScenario( *args, **kwargs )
+            # increment replicate counter
+            self.replicateCounter_ += 1
 
-        # set/reset random walk counter to 0
-        self.randomWalkCounter_ = 0
+        # increment sample row index
+        self.sampleRowIdx_ += 1
+
+        # evaluate run completion conditions, if the sample row index is greater
+        # than the number of rows in sample_
+        self.runComplete_ = ( self.sampleRowIdx_ > self.sample_.shape[ 0 ] )
 
     #===========================================================================#
     # semi-protected                                                            #
@@ -483,97 +368,21 @@ class BaseClass:
 
         NotImplemented
 
-    def _generateSampleFactors( self, **kwargs ):
+    def _runMonteCarloScenario( self, **kwargs ):
         """
-        use:
-        The child class needs to define this class for itself. However, it
-        shall add a pd.DataFrame, accessed by self.sample_ that has columns:
-        [ 'factor', 'minIdx', 'midIdx', 'maxIdx' ]
-        The rows shall be the factors being considered in the hypercube defining
-        the sample/factor space.
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
+        do everything required to run an individual monte carlo scenario for
+        a specific treatement
         """
-
-        NotImplemented
-
-    def _runScenario( self, **kwargs ):
-        """
-        use:
-        This method needs to be defined in child class; however this
-        method shall:
-
-        1) use the current factorState to calculate/generate any necessary
-        additional input
-        2) run scenario
-        3) record all scenario input output in self.data_
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-
-        NotImplemented
-
-    def _updateFactorState( self, *args, **kwargs ):
-        """
-        use:
-        This method needs to be defined in child class; however,
-        This method shall look at the last entry ( the current scenario that
-        just completed ) and the entry before that, whichever outcome is better
-        and either keep the current stateFactor ( the previous result was
-        better ), or it will update its stateFactor by taking the sampleFactor
-        values from the last row ( the current scenario ).
-
-        if keeping current state, increment randomWalkCounter; if using new
-        state, reset randomWalkCounter to 0
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-
         NotImplemented
 
     #===========================================================================#
     # semi-private methods                                                      #
-    # any children wanting to use methods below would need a super() to use     #
-    # in whole or in part                                                       #
+    # child class can only access theese methods, in whole or in part, by using #
+    # super()                                                                   #
     #===========================================================================#
 
-#===============================================================================#
-# main                                                                          #
-#===============================================================================#
-
-if __name__ == "__main__":
-    sim = Simulation()
-    sim.run()
+    def __generateLatinHCsample( self, *args, **kwargs ):
+        """
+        generate latin hyper-cube as pd.DataFrame and save it as sample_
+        """
+        NotImplemented

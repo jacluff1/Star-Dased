@@ -1,7 +1,8 @@
 # ignore folders
 
+# ignore files
+temp/
+
 # ignore file types
 **.csv
 **.pyc
-
-# ignore files

@@ -3,53 +3,35 @@
 # import internal dependencies                                                  #
 #===============================================================================#
 
+from BaseClass import BaseClass
+from Input import radiusParams, thetaParams, phiParams
+
+import Functions as fun
+
 #===============================================================================#
 # import external dependencies                                                  #
 #===============================================================================#
+
+import numpy as np
+import pandas as pd
+import pdb
 
 #===============================================================================#
 # Simulation definition                                                         #
 #===============================================================================#
 
-class MLbase:
+class MLbase( BaseClass ):
 
     #===========================================================================#
     # constructor                                                               #
     #===========================================================================#
 
     def __init__( self, *args, **kwargs ):
-        pass
-
-    #===========================================================================#
-    # puplic methods                                                            #
-    #===========================================================================#
-
-    #===========================================================================#
-    # puplic methods                                                            #
-    # required for BaseClass, implemented here                                  #
-    #===========================================================================#
-
-    def run( self, *args, **kwargs ):
         """
         use:
-        Method shall include the general instructions to populate self.data_,
-        including running through each random walk scenario set up in the
-        sample. For sim models this means generating sim data; for meta models
-        this means generating results from different model hyper-parameters,
-        which is used to find the best set of hyper-parameters for the meta
-        model.
-
-        For all scenarios, this method will make sure the following are recorded
-        on the appropriate row in self.data_:
-        1) initial state factors
-        2) any calculated or generated factors/input
-        3) the output of the run
-
-        After each scenario, the current model will be:
-        1) the factorState will updated, if result is better than previous
-        result
-        2) the randomWalkCounter will either be incremented or reset to 0
-        3) the model state will be saved ( self.saveState() )
+        creates an instance of Simulation. defines a factor space based on
+        params defined in Input.py. If the sim has not been previously run, will
+        create an empty DataFrame to hold all the sim data.
 
         ============================================================================
         input:          type:           description:
@@ -65,7 +47,21 @@ class MLbase:
         None            None
         """
 
-        NotImplemented
+        # construct smaller set of kwargs used for construction
+        kwargs1 = {}
+        if 'verbose' in kwargs: kwargs1['verbose'] = kwargs['verbose']
+
+        # run BaseClass constructor for Simulation instance
+        super().__init__( "MachineLearningBase", *args, **kwargs )
+
+    #===========================================================================#
+    # public methods                                                            #
+    #===========================================================================#
+
+    #===========================================================================#
+    # puplic methods                                                            #
+    # required for BaseClass, implemented here                                  #
+    #===========================================================================#
 
     #===========================================================================#
     # semi-protected methods                                                    #
@@ -74,7 +70,6 @@ class MLbase:
     #===========================================================================#
     # semi-protected methods                                                    #
     # required for BaseClass, implemented here                                  #
-    # directly inheritable by MLBase children                                   #
     #===========================================================================#
 
     def _generateEmptyData( self, **kwargs ):
@@ -98,9 +93,10 @@ class MLbase:
         ============================================================================
         None            None
         """
-        pass
+        # self.data_ = pd.DataFrame( columns=self.columns_ )
+        NotImplemented
 
-    def _generateFactorSpace( self, *args, **kwargs ):
+    def _generateFactorSpace( self, **kwargs ):
         """
         use:
         Method shall add a dictionary, accessed by self.factorSpace_, where the keys
@@ -126,31 +122,28 @@ class MLbase:
         ============================================================================
         None            None
         """
-        pass
 
-    def _generateSampleFactors( self, **kwargs ):
-        """
-        use:
-        Method shall add a pd.DataFrame, accessed by self.sample_ that has columns:
-        [ 'factor', 'minIdx', 'midIdx', 'maxIdx' ]
-        The rows shall be the factors being considered in the hypercube defining
-        the sample/factor space.
+        self.factorSpace_ = {
+            NotImplemented
+        }
 
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
+        lines = [
+            NotImplemented
+        ]
+        fun.printHeader( *lines, **kwargs )
 
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-        pass
+    def _runMonteCarloScenario( self, **kwargs ):
+        NotImplemented
 
     #===========================================================================#
-    # semi-private methods                                                      #
+    # semi-private                                                              #
+    # sampling                                                                  #
     #===========================================================================#
+
+#===============================================================================#
+# main                                                                          #
+#===============================================================================#
+
+if __name__ == "__main__":
+    sim = Simulation()
+    sim.run()

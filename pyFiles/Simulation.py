@@ -63,43 +63,6 @@ class Simulation( BaseClass ):
     # required for BaseClass, implemented here                                  #
     #===========================================================================#
 
-    def run( self, *args, **kwargs ):
-        """
-        use:
-        Method shall include the general instructions to populate self.data_,
-        including running through each random walk scenario set up in the
-        sample. For sim models this means generating sim data; for meta models
-        this means generating results from different model hyper-parameters,
-        which is used to find the best set of hyper-parameters for the meta
-        model.
-
-        For all scenarios, this method will make sure the following are recorded
-        on the appropriate row in self.data_:
-        1) initial state factors
-        2) any calculated or generated factors/input
-        3) the output of the run
-
-        After each scenario, the current model will be:
-        1) the factorState will updated, if result is better than previous
-        result
-        2) the randomWalkCounter will either be incremented or reset to 0
-        3) the model state will be saved ( self.saveState() )
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-        pass
-
     #===========================================================================#
     # semi-protected methods                                                    #
     #===========================================================================#
@@ -183,94 +146,18 @@ class Simulation( BaseClass ):
         ]
         fun.printHeader( *lines, **kwargs )
 
-    def _generateSampleFactors( self, **kwargs ):
-        """
-        use:
-        Method shall add a pd.DataFrame, accessed by self.sample_ that has columns:
-        [ 'factor', 'minIdx', 'midIdx', 'maxIdx' ]
-        The rows shall be the factors being considered in the hypercube defining
-        the sample/factor space.
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-
-        # find initial factors from list of factors
-        sampleFactors = []
-        for x in self.factors_:
-            # select string of tuple only
-            x1 = x[ x.find( "_" ) + 1 : ]
-            # replace '(' with whitespace
-            x1 = x1.replace( "(", "" )
-            # replace ')' with whitespace
-            x1 = x1.replace( ")", "" )
-            # split string on commas into list of strings
-            x1 = x1.split( "," )
-            # convert into a tuple of int
-            x1 = tuple([ int( x2 ) for x2 in x1 ])
-            # only select tuples of length 2: mass is randomly selected
-            if len( x1 ) == 2:
-                # only select where the second tuple is 0 (-1 signifies ending
-                # value)
-                if x1[ 1 ] == 0:
-                    # append original factor column
-                    sampleFactors.append( x )
-
-        # create DataFrame
-        df = pd.DataFrame(
-        index   = np.arange( len(sampleFactors) )   ,
-        columns = [ 'column', 'minIdx', 'midIdx', 'maxIdx' ]  ,
-        )
-
-        # fill in the DataFrame
-        df.column = sampleFactors
-        df.minIdx = 0
-        for rowIdx, column in enumerate( df.column ):
-            if 'radius' in column:
-                maxIdx = radiusParams[2]
-            elif 'theta' in column:
-                maxIdx = thetaParams[2]
-            elif 'phi' in column:
-                maxIdx = phiParams[2]
-            df.loc[ rowIdx, 'maxIdx' ] = maxIdx
-            df.loc[ rowIdx, 'midIdx' ] = maxIdx // 2
-
-        # add sample factor DataFrame
-        self.sampleFactors_ = df
+    def _runMonteCarloScenario( self, **kwargs ):
+        NotImplemented
 
     #===========================================================================#
-    # semi-private methods                                                      #
+    # semi-private                                                              #
+    # sampling                                                                  #
     #===========================================================================#
 
-    def __generateScenario( self, *args, **kwargs ):
-        """
-        use:
-        use the current 'factorState', generate the remaining necessary input
-        for a scenario, and add input to 'data'
+#===============================================================================#
+# main                                                                          #
+#===============================================================================#
 
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-
-        #
-        pass
+if __name__ == "__main__":
+    sim = Simulation()
+    sim.run()
