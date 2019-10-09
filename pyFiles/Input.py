@@ -82,6 +82,13 @@ speedParams = (
     100,
 )
 
+# mass parameters
+massParams = (
+    # minimum mass ( solar mass )
+    # maximum mass ( solar mass )
+    # number of allowed positions
+)
+
 #===============================================================================#
 # rotation matricies                                                            #
 #===============================================================================#

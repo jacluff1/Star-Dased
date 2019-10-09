@@ -94,7 +94,6 @@ class Simulation( BaseClass ):
         None            None
         """
         self.data_ = pd.DataFrame( columns=self.columns_ )
-        self._setInitialFactorState( 0, **kwargs )
 
     def _generateFactorSpace( self, **kwargs ):
         """

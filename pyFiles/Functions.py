@@ -21,6 +21,8 @@ def generic():
 # import internal dependencies                                                  #
 #===============================================================================#
 
+from Input import G
+
 #===============================================================================#
 # import external dependencies                                                  #
 #===============================================================================#
@@ -191,6 +193,26 @@ def saveFigure( toFile, fig, **kwargs ):
     fig.savefig( toFile )
     plt.close( fig )
     printHeader( f"\n\tsaved figure: {toFile}", **kwargs )
+
+#===============================================================================#
+# math & physics                                                                #
+#===============================================================================#
+
+def acceleration_gravity( distance, mass ):
+    return G * mass / distance**2
+
+def Runge-Kutta4( f, dt, x, *args ):
+
+    k1 = dt * f( x, *args )
+    k2 = dt * f( x + dt/2, *args )
+    k3 = dt * f( x + dt/2, *args )
+    k4 = dt * f( x + dt, *args )
+
+    x1 = ( k1 + 2*k2 + 2*k3 + k4 ) / 6
+    return x1
+
+def timeStep( *args ):
+    NotImplemented
 
 #===============================================================================#
 # printing                                                                      #
