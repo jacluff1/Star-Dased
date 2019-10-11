@@ -62,9 +62,9 @@ class BaseClass:
         # look for any previously saved state and load it if it exists
         self.loadState( **kwargs1 )
 
-        # generating factor space every time, will alow factor space to be
+        # generating sample space every time, will alow factor space to be
         # updated at any time without destroying previous results
-        self._generateFactorSpace( **kwargs1 )
+        self._generateSampleSpace( **kwargs1 )
 
         # only generate metadata if it doesn't already exist
         if not hasattr( self, 'factors_' ):
@@ -172,7 +172,14 @@ class BaseClass:
         """
 
         while not self.runComplete_:
+            # run the treatement for current treatement, specified by
+            # sampleRowIdx
             self.__runTreatment()
+            # increment sampleRowIdx
+            self.sampleRowIdx_ += 1
+            # evaluate run completion conditions, if the sample row index is
+            # greater than the number of rows in sample_
+            self.runComplete_ = ( self.sampleRowIdx_ > self.sample_.shape[ 0 ] )
 
     #===========================================================================#
     # semi-protected methods                                                    #
@@ -225,37 +232,64 @@ class BaseClass:
         None            None
         """
 
-        # start with the column names
+        # estimators are the args provided or 'runTime' by default
         if len( args ) > 0:
-            colNames = list( args )
+            estimators = list( args )
         else:
-            colNames = [ 'runTime' ]
+            estimators = [ 'runTime' ]
 
-        # add the estimators
-        self.estimators_ = deepcopy( colNames )
+        # create a container to hold all the sample factors
+        sampleFactors = {
+            'all'       : [],
+            'initial'   : [],
+            'final'     : [],
+        }
 
-        # add the number of estimators
-        self.numEstimators_ = len( self.estimators_ )
+        # crate containers to hold all the randomly generated factors
+        monteCarloFactors = {
+            'all'       : [],
+            'initial'   : [],
+            'final'     : [],
+        }
 
-        # fill in the columns by adding radius, theta, phi, and mass, for
-        # all stars for both initial and final times
-        for name in [ 'radius', 'theta', 'phi' , 'mass' ]:
+        # fill in the sample factors
+        for starIdx in [ 0, 1, 2 ]:
+            sampleFactors['all'].append( f"mass_({starIdx})" )
+            sampleFactors['initial'].append( f"mass_({star})" )
+        for name in [ 'radius', 'theta', 'phi' ]:
             for starIdx in [ 0, 1, 2 ]:
                 for timeIdx in [ 0, -1 ]:
-                    if name == 'mass':
-                        colName = f"{name}_({starIdx})"
+                    colName = f"{name}_({starIdx},{timeIdx})"
+                    sampleFactors['all'].append( colName )
+                    if timeIdx == 0:
+                        sampleFactors['initial'].append( colName )
                     else:
-                        colName = f"{name}_({starIdx},{timeIdx})"
-                    colNames.append( colName )
+                        sampleFactors['final'].append( colName )
 
-        # add data columns
-        self.columns_ = colNames
+        # fill in the monte carlo factors
+        for name in [ 'speed', 'velRadial', 'velPolar', 'velAzimuthal' ]:
+            for starIdx in [ 0, 1, 2 ]:
+                for timeIdx in [ 0, -1 ]:
+                    colName = f"{name}_({starIdx},{timeIdx})"
+                    monteCarloFactors['all'].append( colName )
+                    if timeIdx == 0:
+                        monteCarloFactors['initial'].append( colName )
+                    else:
+                        monteCarloFactors['final'].append( colName )
 
-        # add the factors
-        self.factors_ = colNames[ self.numEstimators_ : ]
+        # add columns
+        self.estimators_        = estimators
+        self.sampleFactors_     = sampleFactors
+        self.monteCarloFactors  = monteCarloFactors
+        self.factors_           = sampleFactors['all'] + monteCarloFactors['all']
+        self.columns_           = estimators + self.factors_
 
-        # add the number of factors
-        self.numFactors_ = len( self.factors_ )
+        # add numbers of columns
+        self.numEstimators_         = len( estimators )
+        self.numSampleFactors       = len( sampleFactors )
+        self.numMonteCarloFactors   = len( monteCarloFactors )
+        self.numFactors_            = len( self.factors_ )
+        self.numColumns_            = len( self.columns_ )
 
     def _generateSample( self, *args, **kwargs ):
         """
@@ -293,21 +327,13 @@ class BaseClass:
         run Monte Carlo scenarios for the given replicate
         """
 
-        # extract args from sample, given sample row index
-        args = [ self.sample_.loc[ self.sampleRowIdx_, col ] for col in self.factors_ ]
-
         while self.replicateCounter_ < self.numReplicates_:
             # run monte carlo scenario
-            self._runMonteCarloScenario( *args, **kwargs )
+            self._runMonteCarloScenario( **kwargs )
             # increment replicate counter
             self.replicateCounter_ += 1
-
-        # increment sample row index
-        self.sampleRowIdx_ += 1
-
-        # evaluate run completion conditions, if the sample row index is greater
-        # than the number of rows in sample_
-        self.runComplete_ = ( self.sampleRowIdx_ > self.sample_.shape[ 0 ] )
+            # save sim state
+            self.saveState( **kwargs )
 
     #===========================================================================#
     # semi-protected                                                            #
@@ -338,7 +364,7 @@ class BaseClass:
 
         NotImplemented
 
-    def _generateFactorSpace( self, **kwargs ):
+    def _generateSampleSpace( self, **kwargs ):
         """
         use:
         The child class needs to define this class for itself. However, it
@@ -368,7 +394,7 @@ class BaseClass:
 
         NotImplemented
 
-    def _runMonteCarloScenario( self, **kwargs ):
+    def _runMonteCarloScenario( self, *args, **kwargs ):
         """
         do everything required to run an individual monte carlo scenario for
         a specific treatement

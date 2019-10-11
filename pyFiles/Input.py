@@ -25,6 +25,11 @@ m2ly = 1.057e-16
 # kilogram to solar mass
 kg2solar = 5.02785e-31
 
+# year to seconds
+yr2s = 60 * 60 * 24 * 365.25
+# 1000 years to seconds
+kyr2s = yr2s * 1e3
+
 #===============================================================================#
 # constants                                                                     #
 #===============================================================================#
@@ -49,7 +54,7 @@ radiusParams = (
     # maximum placement radius ( light year )
     10 * pc2ly,
     # number of allowed positions
-    100,
+    12,
     )
 
 # polar angle parameters
@@ -59,7 +64,7 @@ thetaParams = (
     # largest angle ( radians )
     np.pi,
     # number of allowed positions
-    100,
+    12,
 )
 
 # azimuthal angle parameters
@@ -69,7 +74,17 @@ phiParams = (
     # largest angle to allow ( radians )
     2 * np.pi,
     # number of allowed positions
+    12,
+)
+
+# mass parameters
+massParams = (
+    # minimum mass ( solar mass )
+    0.08,
+    # maximum mass ( solar mass )
     100,
+    # number of allowed positions
+    12,
 )
 
 # initial speed parameters
@@ -77,18 +92,10 @@ speedParams = (
     # minimum initial speed ( km/s )
     0.0,
     # maximum spped computed after placement in order to always start less than
-    #   escape velocity from the system
+    # escape velocity from the system
     # number of allowed positions
     100,
 )
 
-# mass parameters
-massParams = (
-    # minimum mass ( solar mass )
-    # maximum mass ( solar mass )
-    # number of allowed positions
-)
-
-#===============================================================================#
-# rotation matricies                                                            #
-#===============================================================================#
+# max run time ( kyr )
+maxT = 100
