@@ -21,7 +21,7 @@ def generic():
 # import internal dependencies                                                  #
 #===============================================================================#
 
-from Input import G
+from Input import G, speedParams, thetaParams, phiParams
 
 #===============================================================================#
 # import external dependencies                                                  #
@@ -31,6 +31,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pickle
+import warnings
 
 #===============================================================================#
 # auxillary                                                                     #
@@ -60,7 +61,7 @@ def findIdx( value, array ):
 # coordinate frames                                                             #
 #===============================================================================#
 
-def findCM( *args, **kwargs ):
+def findCM( x_i3, m_i1, **kwargs ):
     """
     use:
 
@@ -77,25 +78,39 @@ def findCM( *args, **kwargs ):
     ============================================================================
     None            None
     """
-    pass
+    CM = ( m_i1 * x_i3 ).sum( axis=0 ) / m_i1.sum()
+    return CM[None,:]
 
-def rotate( *args, **kwargs ):
-    """
-    use:
+def spc2xyz( spc_i3, **kwargs ):
 
-    ============================================================================
-    input:          type:           description:
-    ============================================================================
-    args:           type:           description:
+    r = spc[:,0]
 
-    kwargs:         type:           description:
+    sinTheta = np.sin( spc[:,1] )
+    cosTheta = np.cos( spc[:,1] )
 
-    ============================================================================
-    output:         type:
-    ============================================================================
-    None            None
-    """
-    pass
+    sinPhi = np.sin( spc[:,2] )
+    cosPhi = np.cos( spc[:,2] )
+
+    xyz = np.zeros( *spc.shape )
+
+    xyz[:,0] = r * sinTheta * cosPhi
+    xyz[:,1] = r * sinTheta * sinPhi
+    xyz[:,2] = r * cosTheta
+
+    return xyz
+
+def xyz2spc( x_i3, **kwargs ):
+
+    r   = np.sqrt( ( xyz**2 ).sum( axis=1 ) )
+    rho = np.sqrt( ( xyz[:,:2]**2 ).sum( axis=1 ) )
+
+    spc = np.zeros( *xyz.shape )
+
+    spc[:,0] = r
+    spc[:,1] = np.arctan( rho / xyz[:,2] )
+    spc[:,2] = np.arctan( xyz[:,1] / xyz[:,0] )
+
+    return spc
 
 #===============================================================================#
 # file handling                                                                 #
@@ -198,18 +213,76 @@ def saveFigure( toFile, fig, **kwargs ):
 # math & physics                                                                #
 #===============================================================================#
 
-def acceleration_gravity( distance, mass ):
-    return G * mass / distance**2
+def escapeSpeed( x_i3, m_i1 ):
 
-def Runge-Kutta4( f, dt, x, *args ):
+    warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide" )
+  # alpha = m_i1 / x_ij + m_i1.T / x_ij")
 
-    k1 = dt * f( x, *args )
-    k2 = dt * f( x + dt/2, *args )
-    k3 = dt * f( x + dt/2, *args )
-    k4 = dt * f( x + dt, *args )
+    # find the pair-wise difference vectors
+    x_ij3 = pairwiseDifferenceVector( x_i3 )
 
-    x1 = ( k1 + 2*k2 + 2*k3 + k4 ) / 6
-    return x1
+    # find the pai-wise distances
+    x_ij = pairwiseDistance( x_ij3 )
+
+    # calculate intermidiary result
+    alpha_ij = m_i1 / x_ij + m_i1.T / x_ij
+    np.nan_to_num( alpha_ij, posinf=0, copy=False )
+
+    # sum up all ( mass : distance ) contributions along axis = 1 = j,
+    # "from body"
+    alpha_i1 = alpha_ij.sum( axis=1 )[:,None]
+
+    # calculate escape speed for all stars
+    speed_i1 = np.sqrt( 2 * G * alpha_i1 )
+    return speed_i1
+
+def nBodyAcceleration( x_i3, m_i1 ):
+    """
+    ( i , j , 3 )
+    i --> on body
+    j --> from body
+    3 --> xyz spatial vector
+    """
+
+    # find pair-wise difference vectors
+    x_ij3 = pairwiseDifferenceVector( x_i3, **kwargs )
+
+    # find pair-wise distances
+    x_ij = pairwiseDistance( x_ij3 )
+
+    # find pair-wise force directions
+    hat_ij3 = x_ij3 / x_ij[:,:,None]
+    np.nan_to_num( hat_ij3, copy=False )
+
+    # find pair-wise mass product
+    m_ij = m_i1 * m_i1[:,0]
+
+    # find piece-wise force of gravity
+    f_ij3 = hat_ij3 * G * m_ij[:,:,None] / x_ij[:,:,None]
+
+    # sum up forces along ( 1 - from body ) to get forces on bodies
+    f_i3 = f_ij3.sum( axis=1 )
+
+    # get acellerations on bodies
+    a_i3 = f_i3 / m_i1
+    return a_i3
+
+def pairwiseDifferenceVector( x_i3, **kwargs ):
+    x_ij3 = x_i3 - x_i3[:,None,:]
+    return x_ij3
+
+def pairwiseDistance( x_ij3, **kwargs ):
+    x_ij = np.sqrt( ( x_ij3**2 ).sum( axis=2 ) )
+    return x_ij
+
+def RungeKutta4( f, dt, x, *args ):
+
+    k1  = f( x, *args )
+    k23 = f( x + dt/2, *args )
+    k4  = f( x + dt, *args )
+
+    delta_y = dt * ( k1 + 2*k23 + 2*k23 + k4 ) / 6
+    return delta_y
 
 def timeStep( *args ):
     NotImplemented
@@ -349,3 +422,28 @@ def printList( list1, **kwargs ):
 #===============================================================================#
 # random generator                                                              #
 #===============================================================================#
+
+def randomSpeed( maxSpeed_i1 ):
+
+    # create empty array to hold random speed
+    speed = np.zeros((
+        maxSpeed_i1.shape[0], # number of bodies
+        1,
+    ))
+
+    # fill in the random speeds
+    for starIdx in range( maxSpeed_i1.shape[0] ):
+        # create allowable speed args
+        args = (
+            speedParams[0], # min speed
+            maxSpeed.item(), # the single value maxSpeed
+            speedParams[1], # number of points
+        )
+        # create allowable speeds
+        speeds = np.linspace( *args )
+        # choose random speed index
+        randIdx = np.random.randint( args[2] + 1 )
+        # fill in random speed
+        speed[ starIdx, 0 ] = speeds[ randIdx ]
+
+    return speed

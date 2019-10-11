@@ -4,7 +4,7 @@
 #===============================================================================#
 
 from BaseClass import BaseClass
-from Input import radiusParams, thetaParams, phiParams
+from Input import radiusParams, thetaParams, phiParams, massParams, speedParams
 
 import Functions as fun
 
@@ -95,7 +95,7 @@ class Simulation( BaseClass ):
         """
         self.data_ = pd.DataFrame( columns=self.columns_ )
 
-    def _generateFactorSpace( self, **kwargs ):
+    def _generateSampleSpace( self, **kwargs ):
         """
         use:
         Method shall add a dictionary, accessed by self.factorSpace_, where the keys
@@ -122,7 +122,7 @@ class Simulation( BaseClass ):
         None            None
         """
 
-        self.factorSpace_ = {
+        self.sampleSpace_ = {
             # having radii in exponential space will allow denser sampling
             # at small radii and sparser sampling at the upper limits of radii
             # this assumes that smaller radii from CM is more likely.
@@ -130,27 +130,72 @@ class Simulation( BaseClass ):
             np.log( radiusParams[0] ),
             np.log( radiusParams[1] ),
             radiusParams[2]
-            ) )                                                         ,
-            # uniform spacing of polar angles assumes all angles are equally
-            # likely
-            'theta'     : np.linspace( *thetaParams, endpoint=False )   ,
-            # uniform spacing of azimuthal angles assumes all angles are equally
-            # likely
-            'phi'       : np.linspace( *phiParams  , endpoint=False )   ,
+            )),
+            'theta'     : np.linspace( *thetaParams, endpoint=False ),
+            'phi'       : np.linspace( *phiParams  , endpoint=False ),
+            'mass'      : np.linspace( *massParams )
         }
 
         lines = [
-            "", 'Factor Space:', "", f"radius:\t{radiusParams}",
-            f"theta:\t{thetaParams}", f"phi:\t{phiParams}"
+            "",
+            'Sample Space:',
+            f"radius:\t{radiusParams}",
+            f"theta:\t{thetaParams}",
+            f"phi:\t{phiParams}",
+            f"mass:\t{massParams}"
         ]
         fun.printHeader( *lines, **kwargs )
 
     def _runMonteCarloScenario( self, **kwargs ):
-        NotImplemented
+
+        # use the sampleRowIdx to get treatement values
+        sampleRow = self.sample_.iloc[ self.sampleRowIdx_ ]
+
+        # extract SPC positions from sampleRow
+        spc_i3 = np.zeros( (3,3) )
+        for starIdx in [ 0, 1, 2 ]:
+            for colIdx, name in enumerate([ 'radius', 'theta', 'phi' ]):
+                key = f"{name}_({starIdx},0)"
+                spc_i3[ starIdx, colIdx ] = sampleRow[ key ]
+
+        # extract masses from sampleRow
+        m_i1 = np.array([ sampleRow[ f"mass_({starIdx})" ] for starIdx in range(3) ])[:,None]
+
+        # calculate XYZ positions
+        x_i3 = fun.spc2xyz( spc_i3, **kwargs )
+
+        # calculate CM of the new system ( vector from current origin to CM )
+        CM_13 = fun.findCM( x_i3, m_i1 )
+
+        # make CM the new origin ( subtract CM vector from star positions )
+        x_i3 -= CM_13
+
+        # calculate escape velocity from system
+        escapeSpeed_i1 = fun.escapeSpeed( posXYZ, M )
+
+        # generate random speed < escape velocity
+        speed_i1 = fun.randomSpeed( escapeSpeed_i1 )
+
+        # generate random velocity angle ( SPC )
+
+        # calculate XYZ velocities
+
+        # find velocity in SPC
+
+        # find star radii
+
+        # set starting run time
+
+        # run through simulation until any terminition conditions are met
+
+        # collect all the scenario data
+
+        # add the senario data to data_
+
+        # end
 
     #===========================================================================#
     # semi-private                                                              #
-    # sampling                                                                  #
     #===========================================================================#
 
 #===============================================================================#

@@ -96,7 +96,7 @@ class MLbase( BaseClass ):
         # self.data_ = pd.DataFrame( columns=self.columns_ )
         NotImplemented
 
-    def _generateFactorSpace( self, **kwargs ):
+    def _generateSampleSpace( self, **kwargs ):
         """
         use:
         Method shall add a dictionary, accessed by self.factorSpace_, where the keys
