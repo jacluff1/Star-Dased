@@ -194,14 +194,14 @@ class Simulation( BaseClass ):
         x_i3_t    = deepcopy( x_i3 )
         xdot_i3_t = deepcopy( xdot_i3 )
 
+        # initialize time step using smallest allowed radius & initial velocity
+        dt = fun.timeStep( radiusParams[0], xdot_i3 )
+
         # run through simulation until any terminition conditions are met
         while all([ collision, ejection, timeLimit ]):
 
-            # calculate time step
-            dt = fun.timeStep( xdot_i3_t )
-
             # find change in velocity
-            dv = fun.RungeKutta4(
+            dv_i3 = fun.RungeKutta4(
                 fun.nBodyAcceleration, # function to integrate
                 dt, # time step to use
                 x_i3_t, # current position
@@ -209,10 +209,13 @@ class Simulation( BaseClass ):
             )
 
             # update velocity
-            xdot_i3_t += dv
+            xdot_i3_t += dv_i3
+
+            # find the change in position
+            dx_i3 = xdot_i3_t * dt
 
             # update positions
-            x_i3_t += xdot_i3_t * dt
+            x_i3_t += dx_i3
 
             # update time
             t += dt
@@ -221,10 +224,13 @@ class Simulation( BaseClass ):
             collision = fun.checkCollision( x_i3_t )
 
             # see if any stars are moving to fast
-            ejection = fun.checkEjection( xdot_i3_t )
+            ejection = fun.checkEjection( xdot_i3_t, x_i3_t, m_i1 )
 
             # see if timit limit has been exceeded
             timeLimit = ( t >= maxT )
+
+            # update time step
+            dt = fun.timeStep( dx_i3, xdot_i3_t )
 
         # convert ending values back to SPC
         spc_i3_t    = fun.xyz2spc( x_i3_t )

@@ -179,7 +179,7 @@ class BaseClass:
             self.sampleRowIdx_ += 1
             # evaluate run completion conditions, if the sample row index is
             # greater than the number of rows in sample_
-            self.runComplete_ = ( self.sampleRowIdx_ > self.sample_.shape[ 0 ] )
+            self.runComplete_ = ( self.sampleRowIdx_ >= self.sample_.shape[ 0 ] )
 
     #===========================================================================#
     # semi-protected methods                                                    #
