@@ -4,7 +4,7 @@
 #===============================================================================#
 
 from BaseClass import BaseClass
-from Input import radiusParams, thetaParams, phiParams, massParams, speedParams
+from Input import radiusParams, thetaParams, phiParams, massParams, speedParams, maxT
 
 import Functions as fun
 
@@ -173,24 +173,89 @@ class Simulation( BaseClass ):
         # calculate escape velocity from system
         escapeSpeed_i1 = fun.escapeSpeed( posXYZ, M )
 
-        # generate random speed < escape velocity
-        speed_i1 = fun.randomSpeed( escapeSpeed_i1 )
-
-        # generate random velocity angle ( SPC )
+        # generate random velocity ( < escape velocity ) in SPC
+        spcdot_i3 = fun.randomVelSPC( escapeSpeed_i1 )
 
         # calculate XYZ velocities
-
-        # find velocity in SPC
+        xdot_i3 = fun.spc2xyz( spcdot_i3 )
 
         # find star radii
+        radii_i1 = fun.stellarRadiiLookup( m_i1 )
 
         # set starting run time
+        time = 0
+
+        # set terminition conditions
+        collision = False
+        ejection = False
+        timeLimit = False
+
+        # initialize time and positions to be updated
+        x_i3_t    = deepcopy( x_i3 )
+        xdot_i3_t = deepcopy( xdot_i3 )
 
         # run through simulation until any terminition conditions are met
+        while all([ collision, ejection, timeLimit ]):
+
+            # calculate time step
+            dt = fun.timeStep( xdot_i3_t )
+
+            # find change in velocity
+            dv = fun.RungeKutta4(
+                fun.nBodyAcceleration, # function to integrate
+                dt, # time step to use
+                x_i3_t, # current position
+                m_i1, # other arguments for function ( mass )
+            )
+
+            # update velocity
+            xdot_i3_t += dv
+
+            # update positions
+            x_i3_t += xdot_i3_t * dt
+
+            # update time
+            t += dt
+
+            # see if any stars collided
+            collision = fun.checkCollision( x_i3_t )
+
+            # see if any stars are moving to fast
+            ejection = fun.checkEjection( xdot_i3_t )
+
+            # see if timit limit has been exceeded
+            timeLimit = ( t >= maxT )
+
+        # convert ending values back to SPC
+        spc_i3_t    = fun.xyz2spc( x_i3_t )
+        spcdot_i3_t = fun.xyz2spc( xdot_i3_t )
 
         # collect all the scenario data
+        results = {}
+        for starIdx in [ 0, 1, 2 ]:
+
+            # add mass to results
+            results[ f"mass_({starIdx})" ] = m_i1[ starIdx, 0 ]
+
+            # add initial positions (SPC)
+            for colIdx, name in enumerate([ 'radius', 'theta', 'phi' ]):
+                results[ f"{name}_({starIdx},0)" ] = spc_i3[ starIdx, colIdx ]
+
+            # add final positions( (SPC)
+            for colIdx, name in enumerate([ 'radius', 'theta', 'phi' ]):
+                results[ f"{name}_({starIdx},-1)" ] = spc_i3_t[ starIdx, colIdx ]
+
+            # add initial velocities (SPC)
+            for colIdx, name in enumerate([ 'velRadial', 'velPolar', 'velAzimuthal' ]):
+                results[ f"{name}_({starIdx},0)" ] = spcdot_i3[ starIdx, colIdx ]
+
+            # add final velocities (SPC)
+            for colIdx, name in enumerate([ 'velRadial', 'velPolar', 'velAzimuthal' ]):
+                results[ f"{name}_({starIdx},-1)" ] = spcdot_i3_t[ starIdx, colIdx ]
 
         # add the senario data to data_
+        row = pd.DataFrame( results, index=[0] )
+        self.data_ = self.data_.append( row )
 
         # end
 
