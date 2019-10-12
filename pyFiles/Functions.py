@@ -57,6 +57,36 @@ def findIdx( value, array ):
     idx = np.abs( array - value ).argmin()
     return idx
 
+def stellarRadiiLookup( m_i1 ):
+
+    # load stellar data to pd.DataFrame
+    table = pd.read_csv( "../data/starClass.txt" )
+
+    # pull mass and radius columns from table, reversing order to be in
+    # numerical order.
+    mass  = table.mass.values[::-1]
+    radii = table.radius.values[::-1]
+
+    # allowable mass values
+    mass1 = np.linspace( *massParams )
+
+    # interpolate lower resolution table values
+    radii1 = np.interpolate( mass1, mass, radii )
+
+    # create empty stellar radius array
+    radius = np.zeros((
+        m_i1.shape[0], # number of bodies
+        1
+    ))
+
+    for starIdx, starMass in enumerate( m_i1 ):
+        # find the radius index by looking up the mass index
+        idx = findIdx( starMass, mass1 )
+        # fill in the star radius
+        radius[ starIdx, 0 ] = radii1[ idx ]
+
+    return radius
+
 #===============================================================================#
 # coordinate frames                                                             #
 #===============================================================================#
@@ -91,13 +121,13 @@ def spc2xyz( spc_i3, **kwargs ):
     sinPhi = np.sin( spc[:,2] )
     cosPhi = np.cos( spc[:,2] )
 
-    xyz = np.zeros( *spc.shape )
+    x_i3 = np.zeros( *spc.shape )
 
-    xyz[:,0] = r * sinTheta * cosPhi
-    xyz[:,1] = r * sinTheta * sinPhi
-    xyz[:,2] = r * cosTheta
+    x_i3[:,0] = r * sinTheta * cosPhi
+    x_i3[:,1] = r * sinTheta * sinPhi
+    x_i3[:,2] = r * cosTheta
 
-    return xyz
+    return x_i3
 
 def xyz2spc( x_i3, **kwargs ):
 
@@ -423,27 +453,51 @@ def printList( list1, **kwargs ):
 # random generator                                                              #
 #===============================================================================#
 
-def randomSpeed( maxSpeed_i1 ):
+def randomVelSPC( maxSpeed_i1 ):
 
-    # create empty array to hold random speed
-    speed = np.zeros((
+    spcdot_i3 = np.zeros((
         maxSpeed_i1.shape[0], # number of bodies
-        1,
+        3, # spacial coordinates
     ))
 
-    # fill in the random speeds
-    for starIdx in range( maxSpeed_i1.shape[0] ):
-        # create allowable speed args
-        args = (
-            speedParams[0], # min speed
-            maxSpeed.item(), # the single value maxSpeed
-            speedParams[1], # number of points
-        )
-        # create allowable speeds
-        speeds = np.linspace( *args )
-        # choose random speed index
-        randIdx = np.random.randint( args[2] + 1 )
-        # fill in random speed
-        speed[ starIdx, 0 ] = speeds[ randIdx ]
+    # construct allowable angles and directions
+    radial = [ -1, 1 ] # toward/away from CM
+    thetas = np.linspace( *thetaParams, endpoint=False )
+    phis   = np.linspace( *phiParams  , endpoint=False )
 
-    return speed
+    # fill in random angles
+    for starIdx, maxSpeed in enumerate( maxSpeed_i1 ):
+
+        # construct speed args
+        speedArgs = (
+            speedParams[0], # min speed
+            maxSpeed.item(), # max speed
+            speedParams[1], # number of allowed values
+        )
+        # construct allowable speed value
+        speed = np.linspace( *speedArgs )
+        # fill in random radial value and dicrection
+        spcdot_i3[ starIdx, 0] = speed[
+            np.random.randint( speedArgs[2] + 1 )
+        ] * radial[ np.random.randint( 2 ) ]
+
+        # fill in random theta
+        spcdot_i3[ starIdx, 1 ] = thetas[
+            np.random.randint( thetaParams[2] + 1 )
+        ]
+        # fill in random phi
+        spcdot_i3[ starIdx, 2 ] = phis[
+            np.random.randint( phiParams[2] + 1 )
+        ]
+
+    return spcdot_i3
+
+#===============================================================================#
+# termination conditions                                                        #
+#===============================================================================#
+
+def checkCollision( x_i3_t, radii_i1 ):
+    NotImplemented
+
+def checkEjection( xdot_i3_t ):
+    NotImplemented
