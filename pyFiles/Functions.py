@@ -266,7 +266,7 @@ def escapeSpeed( x_i3, m_i1 ):
     speed_i1 = np.sqrt( 2 * G * alpha_i1 )
     return speed_i1
 
-def nBodyAcceleration( x_i3, m_i1 ):
+def nBodyAcceleration( x_ij3, m_i1 ):
     """
     ( i , j , 3 )
     i --> on body
@@ -301,7 +301,17 @@ def pairwiseDifferenceVector( x_i3, **kwargs ):
     x_ij3 = x_i3 - x_i3[:,None,:]
     return x_ij3
 
-def pairwiseDistance( x_ij3, **kwargs ):
+def pairwiseDistance( x, **kwargs ):
+
+    # determine if x is of form x_ij3
+    if len( x.shape ) == 3:
+        x_ij3 = x
+    # or if x is of form x_i3
+    elif len( x.shape ) == 2:
+        x_ij3 = pairwiseDifferenceVector( x )
+
+    # use he pairwise difference vectors to find pairwise distance ( sum along
+    # spacial dimention )
     x_ij = np.sqrt( ( x_ij3**2 ).sum( axis=2 ) )
     return x_ij
 
@@ -314,8 +324,14 @@ def RungeKutta4( f, dt, x, *args ):
     delta_y = dt * ( k1 + 2*k23 + 2*k23 + k4 ) / 6
     return delta_y
 
-def timeStep( *args ):
-    NotImplemented
+def timeStep( dx_i3, xdot_i3 ):
+
+    if len( dx_i3.shape ) == 2:
+        dx = np.sqrt( ( dx_i3**2 ).sum( axis=1 ) )
+    else:
+        dx = dx_i3
+    vel = np.sqrt( ( xdot_i3**2 ).sum( axis=1 ) )
+    return ( dx / vel ).min()
 
 #===============================================================================#
 # printing                                                                      #
@@ -460,9 +476,8 @@ def randomVelSPC( maxSpeed_i1 ):
         3, # spacial coordinates
     ))
 
-    # construct allowable angles and directions
-    radial = [ -1, 1 ] # toward/away from CM
-    thetas = np.linspace( *thetaParams, endpoint=False )
+    # construct allowable angles
+        thetas = np.linspace( *thetaParams, endpoint=False )
     phis   = np.linspace( *phiParams  , endpoint=False )
 
     # fill in random angles
@@ -474,12 +489,14 @@ def randomVelSPC( maxSpeed_i1 ):
             maxSpeed.item(), # max speed
             speedParams[1], # number of allowed values
         )
+
         # construct allowable speed value
         speed = np.linspace( *speedArgs )
+
         # fill in random radial value and dicrection
         spcdot_i3[ starIdx, 0] = speed[
             np.random.randint( speedArgs[2] + 1 )
-        ] * radial[ np.random.randint( 2 ) ]
+        ]
 
         # fill in random theta
         spcdot_i3[ starIdx, 1 ] = thetas[
@@ -496,8 +513,28 @@ def randomVelSPC( maxSpeed_i1 ):
 # termination conditions                                                        #
 #===============================================================================#
 
-def checkCollision( x_i3_t, radii_i1 ):
-    NotImplemented
+def checkCollision( x_i3, r_i1 ):
 
-def checkEjection( xdot_i3_t ):
-    NotImplemented
+    # find the pair-wise distance for each body
+    x_ij = pairwiseDistance( x_i3 )
+
+    # find the pair-wise sum of radii
+    r_ij = r_i1 + r_i1.T
+    # convert diagonal to 0, since these pairs are not viable sim pairs
+    np.fill_diagonal( r_ij, 0 )
+
+    # determine any collitions
+    collisions = ( r_ij > x_ij )
+    return np.any( collisions )
+
+def checkEjection( xdot_i3, x_i3, m_i1 ):
+
+    # determine the escape velocity from the system for each body
+    maxSpeed = escapeSpeed( x_i3, m_i1 )
+
+    # calculate the speed of each body
+    speed = np.sqrt( ( xdot_i3**2 ).sum( axis=1 )
+
+    # determine any eminent ejections
+    ejections = ( speed > maxSpeed )
+    return np.any( ejections )
