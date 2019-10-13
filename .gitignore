@@ -1,4 +1,5 @@
 # ignore folders
+StarDasedVenv/
 
 # ignore files
 temp/
