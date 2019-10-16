@@ -469,12 +469,9 @@ def printList( list1, **kwargs ):
 # random generator                                                              #
 #===============================================================================#
 
-def randomVelSPC( maxSpeed_i1 ):
+def randomSpeed( maxSpeed_i1 ):
 
-    spcdot_i3 = np.zeros((
-        maxSpeed_i1.shape[0], # number of bodies
-        3, # spacial coordinates
-    ))
+    spcdot_i3 = np.zeros( *maxSpeed_i1.shape )
 
     # construct allowable angles
         thetas = np.linspace( *thetaParams, endpoint=False )
@@ -496,15 +493,6 @@ def randomVelSPC( maxSpeed_i1 ):
         # fill in random radial value and dicrection
         spcdot_i3[ starIdx, 0] = speed[
             np.random.randint( speedArgs[2] + 1 )
-        ]
-
-        # fill in random theta
-        spcdot_i3[ starIdx, 1 ] = thetas[
-            np.random.randint( thetaParams[2] + 1 )
-        ]
-        # fill in random phi
-        spcdot_i3[ starIdx, 2 ] = phis[
-            np.random.randint( phiParams[2] + 1 )
         ]
 
     return spcdot_i3
