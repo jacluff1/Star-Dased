@@ -171,6 +171,11 @@ class BaseClass:
         None            None
         """
 
+        aux.printHeader(*[
+            "",
+            f"treatment:\t{self.sampleRowIdx_} / {self.sample_.shape[0]}"
+        ])
+
         while not self.runComplete_:
             # run the treatement for current treatement, specified by
             # sampleRowIdx
@@ -256,7 +261,7 @@ class BaseClass:
         for starIdx in [ 0, 1, 2 ]:
             sampleFactors['all'].append( f"mass_({starIdx})" )
             sampleFactors['initial'].append( f"mass_({star})" )
-        for name in [ 'radius', 'theta', 'phi' ]:
+        for name in [ 'radius', 'theta', 'phi', 'velTheta', 'velPhi' ]:
             for starIdx in [ 0, 1, 2 ]:
                 for timeIdx in [ 0, -1 ]:
                     colName = f"{name}_({starIdx},{timeIdx})"
@@ -267,7 +272,7 @@ class BaseClass:
                         sampleFactors['final'].append( colName )
 
         # fill in the monte carlo factors
-        for name in [ 'speed', 'velRadial', 'velPolar', 'velAzimuthal' ]:
+        for name in [ 'speed' ]
             for starIdx in [ 0, 1, 2 ]:
                 for timeIdx in [ 0, -1 ]:
                     colName = f"{name}_({starIdx},{timeIdx})"
@@ -277,12 +282,16 @@ class BaseClass:
                     else:
                         monteCarloFactors['final'].append( colName )
 
+        # other columns, usefull for EDA and tracking
+        misc = [ 'treatment', 'replicate' , "outcome", 'steps' ]
+
         # add columns
         self.estimators_        = estimators
         self.sampleFactors_     = sampleFactors
         self.monteCarloFactors  = monteCarloFactors
         self.factors_           = sampleFactors['all'] + monteCarloFactors['all']
-        self.columns_           = estimators + self.factors_
+        self.miscColumns        = misc
+        self.columns_           = estimators + misc + self.factors_
 
         # add numbers of columns
         self.numEstimators_         = len( estimators )
@@ -328,6 +337,7 @@ class BaseClass:
         """
 
         while self.replicateCounter_ < self.numReplicates_:
+            print( f"replicate:\t{self.replicateCounter_} / {self.numReplicates_}" )
             # run monte carlo scenario
             self._runMonteCarloScenario( **kwargs )
             # increment replicate counter

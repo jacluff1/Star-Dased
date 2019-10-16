@@ -173,8 +173,18 @@ class Simulation( BaseClass ):
         # calculate escape velocity from system
         escapeSpeed_i1 = fun.escapeSpeed( posXYZ, M )
 
-        # generate random velocity ( < escape velocity ) in SPC
-        spcdot_i3 = fun.randomVelSPC( escapeSpeed_i1 )
+        # create container to hold spc initial velocities
+        spcdot_i3 = np.zeros( (3,3) )
+        # assign random speed
+        spcdot_i3[ : , 0 ] = fun.randomVelSPC( escapeSpeed_i1 )
+        # fill in the polar and azimuthal angles
+        for name, colIdx in zip(
+            [ 'velTheta', 'velPhi' ],
+            [ 1         , 2        ]
+        ):
+            for starIdx in [ 0, 1, 2 ]:
+                key = f"{name}_({starIdx},0)"
+                spcdot_i3[ starIdx, colIdx ] = sampleRow[ key ]
 
         # calculate XYZ velocities
         xdot_i3 = fun.spc2xyz( spcdot_i3 )
@@ -182,8 +192,8 @@ class Simulation( BaseClass ):
         # find star radii
         radii_i1 = fun.stellarRadiiLookup( m_i1 )
 
-        # set starting run time
-        time = 0
+        # set starting run time and step counter
+        steps, time = 0, 0
 
         # set terminition conditions
         collision = False
@@ -232,12 +242,29 @@ class Simulation( BaseClass ):
             # update time step
             dt = fun.timeStep( dx_i3, xdot_i3_t )
 
+            # increment step counter
+            steps += 1
+
         # convert ending values back to SPC
         spc_i3_t    = fun.xyz2spc( x_i3_t )
         spcdot_i3_t = fun.xyz2spc( xdot_i3_t )
 
-        # collect all the scenario data
+        # create empty container to hold scenario results
         results = {}
+
+        # add the run time and misc columns
+        results['runTime']   = t
+        results['treatment'] = self.sampleRowIdx_
+        results['replicate'] = self.replicateCounter_
+        results['steps']     = steps
+        if collision:
+            results['outcome'] = 'collision'
+        elif ejection:
+            results['outcome'] = 'ejection'
+        else:
+            results['outcome'] = 'fullRun'
+
+        # add all positions, velocities and mass for each star
         for starIdx in [ 0, 1, 2 ]:
 
             # add mass to results
