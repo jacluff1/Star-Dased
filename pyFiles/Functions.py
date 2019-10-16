@@ -21,7 +21,7 @@ def generic():
 # import internal dependencies                                                  #
 #===============================================================================#
 
-from Input import G, speedParams, thetaParams, phiParams
+from Input import G, speedParams, thetaParams, phiParams, massParams
 
 #===============================================================================#
 # import external dependencies                                                  #
@@ -30,6 +30,8 @@ from Input import G, speedParams, thetaParams, phiParams
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import pandas as pd
+import pdb
 import pickle
 import warnings
 
@@ -60,7 +62,7 @@ def findIdx( value, array ):
 def stellarRadiiLookup( m_i1 ):
 
     # load stellar data to pd.DataFrame
-    table = pd.read_csv( "../data/starClass.txt" )
+    table = pd.read_csv( "data/starClass.txt" )
 
     # pull mass and radius columns from table, reversing order to be in
     # numerical order.
@@ -71,7 +73,7 @@ def stellarRadiiLookup( m_i1 ):
     mass1 = np.linspace( *massParams )
 
     # interpolate lower resolution table values
-    radii1 = np.interpolate( mass1, mass, radii )
+    radii1 = np.interp( mass1, mass, radii )
 
     # create empty stellar radius array
     radius = np.zeros((
@@ -113,15 +115,15 @@ def findCM( x_i3, m_i1, **kwargs ):
 
 def spc2xyz( spc_i3, **kwargs ):
 
-    r = spc[:,0]
+    r = spc_i3[:,0]
 
-    sinTheta = np.sin( spc[:,1] )
-    cosTheta = np.cos( spc[:,1] )
+    sinTheta = np.sin( spc_i3[:,1] )
+    cosTheta = np.cos( spc_i3[:,1] )
 
-    sinPhi = np.sin( spc[:,2] )
-    cosPhi = np.cos( spc[:,2] )
+    sinPhi = np.sin( spc_i3[:,2] )
+    cosPhi = np.cos( spc_i3[:,2] )
 
-    x_i3 = np.zeros( *spc.shape )
+    x_i3 = np.zeros( spc_i3.shape )
 
     x_i3[:,0] = r * sinTheta * cosPhi
     x_i3[:,1] = r * sinTheta * sinPhi
@@ -131,14 +133,14 @@ def spc2xyz( spc_i3, **kwargs ):
 
 def xyz2spc( x_i3, **kwargs ):
 
-    r   = np.sqrt( ( xyz**2 ).sum( axis=1 ) )
-    rho = np.sqrt( ( xyz[:,:2]**2 ).sum( axis=1 ) )
+    r   = np.sqrt( ( x_i3**2 ).sum( axis=1 ) )
+    rho = np.sqrt( ( x_i3[:,:2]**2 ).sum( axis=1 ) )
 
-    spc = np.zeros( *xyz.shape )
+    spc = np.zeros( x_i3.shape )
 
     spc[:,0] = r
-    spc[:,1] = np.arctan( rho / xyz[:,2] )
-    spc[:,2] = np.arctan( xyz[:,1] / xyz[:,0] )
+    spc[:,1] = np.arctan( rho / x_i3[:,2] )
+    spc[:,2] = np.arctan( x_i3[:,1] / x_i3[:,0] )
 
     return spc
 
@@ -171,7 +173,7 @@ def toPickle( toFile, fromObject, **kwargs ):
     None            None
     """
 
-    toFile = f"../data/{toFile}.pkl"
+    toFile = f"data/{toFile}.pkl"
 
     pickle.dump(
         fromObject,             # object to write
@@ -203,7 +205,7 @@ def fromPickle( fromFile, **kwargs ):
     toObject        dict (or other object)
     """
 
-    fromFile = f"../data/{fromFile}.pkl"
+    fromFile = f"data/{fromFile}.pkl"
 
     if os.path.isfile( fromFile ):
         toObject = pickle.load(
@@ -246,7 +248,6 @@ def saveFigure( toFile, fig, **kwargs ):
 def escapeSpeed( x_i3, m_i1 ):
 
     warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide" )
-  # alpha = m_i1 / x_ij + m_i1.T / x_ij")
 
     # find the pair-wise difference vectors
     x_ij3 = pairwiseDifferenceVector( x_i3 )
@@ -326,9 +327,9 @@ def RungeKutta4( f, dt, x, *args ):
 
 def timeStep( dx_i3, xdot_i3 ):
 
-    if len( dx_i3.shape ) == 2:
+    try:
         dx = np.sqrt( ( dx_i3**2 ).sum( axis=1 ) )
-    else:
+    except:
         dx = dx_i3
     vel = np.sqrt( ( xdot_i3**2 ).sum( axis=1 ) )
     return ( dx / vel ).min()
@@ -471,11 +472,8 @@ def printList( list1, **kwargs ):
 
 def randomSpeed( maxSpeed_i1 ):
 
-    spcdot_i3 = np.zeros( *maxSpeed_i1.shape )
-
-    # construct allowable angles
-        thetas = np.linspace( *thetaParams, endpoint=False )
-    phis   = np.linspace( *phiParams  , endpoint=False )
+    # make empty array with same shape as input
+    spcdot_i3 = np.zeros( maxSpeed_i1.shape )
 
     # fill in random angles
     for starIdx, maxSpeed in enumerate( maxSpeed_i1 ):
@@ -521,8 +519,8 @@ def checkEjection( xdot_i3, x_i3, m_i1 ):
     maxSpeed = escapeSpeed( x_i3, m_i1 )
 
     # calculate the speed of each body
-    speed = np.sqrt( ( xdot_i3**2 ).sum( axis=1 )
+    speed = np.sqrt( ( xdot_i3**2 ).sum( axis=1 ) )
 
     # determine any eminent ejections
-    ejections = ( speed > maxSpeed )
+    ejection = ( speed > maxSpeed )
     return np.any( ejections )
