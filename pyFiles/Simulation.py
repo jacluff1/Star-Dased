@@ -12,9 +12,9 @@ import Functions as fun
 # import external dependencies                                                  #
 #===============================================================================#
 
+from copy import deepcopy
 import numpy as np
 import pandas as pd
-import pdb
 
 #===============================================================================#
 # Simulation definition                                                         #
@@ -171,12 +171,12 @@ class Simulation( BaseClass ):
         x_i3 -= CM_13
 
         # calculate escape velocity from system
-        escapeSpeed_i1 = fun.escapeSpeed( posXYZ, M )
+        escapeSpeed_i1 = fun.escapeSpeed( x_i3, m_i1 )
 
         # create container to hold spc initial velocities
         spcdot_i3 = np.zeros( (3,3) )
         # assign random speed
-        spcdot_i3[ : , 0 ] = fun.randomVelSPC( escapeSpeed_i1 )
+        spcdot_i3[ : , 0 ] = fun.randomSpeed( escapeSpeed_i1 )[:,0]
         # fill in the polar and azimuthal angles
         for name, colIdx in zip(
             [ 'velTheta', 'velPhi' ],
@@ -228,7 +228,7 @@ class Simulation( BaseClass ):
             x_i3_t += dx_i3
 
             # update time
-            t += dt
+            time += dt
 
             # see if any stars collided
             collision = fun.checkCollision( x_i3_t )
@@ -237,7 +237,7 @@ class Simulation( BaseClass ):
             ejection = fun.checkEjection( xdot_i3_t, x_i3_t, m_i1 )
 
             # see if timit limit has been exceeded
-            timeLimit = ( t >= maxT )
+            timeLimit = ( timet >= maxT )
 
             # update time step
             dt = fun.timeStep( dx_i3, xdot_i3_t )
@@ -253,7 +253,7 @@ class Simulation( BaseClass ):
         results = {}
 
         # add the run time and misc columns
-        results['runTime']   = t
+        results['runTime']   = time
         results['treatment'] = self.sampleRowIdx_
         results['replicate'] = self.replicateCounter_
         results['steps']     = steps
@@ -288,7 +288,7 @@ class Simulation( BaseClass ):
 
         # add the senario data to data_
         row = pd.DataFrame( results, index=[0] )
-        self.data_ = self.data_.append( row )
+        self.data_ = self.data_.append( row, sort=False )
 
         # end
 

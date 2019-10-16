@@ -54,7 +54,7 @@ radiusParams = (
     # maximum placement radius ( light year )
     10 * pc2ly,
     # number of allowed positions
-    12,
+    18,
     )
 
 # polar angle parameters
@@ -64,7 +64,7 @@ thetaParams = (
     # largest angle ( radians )
     np.pi,
     # number of allowed positions
-    12,
+    18,
 )
 
 # azimuthal angle parameters
@@ -74,7 +74,7 @@ phiParams = (
     # largest angle to allow ( radians )
     2 * np.pi,
     # number of allowed positions
-    12,
+    18,
 )
 
 # mass parameters
@@ -84,7 +84,7 @@ massParams = (
     # maximum mass ( solar mass )
     100,
     # number of allowed positions
-    12,
+    18,
 )
 
 # initial speed parameters

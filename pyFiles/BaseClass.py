@@ -4,7 +4,7 @@
 #===============================================================================#
 
 import Functions as fun
-from Input import radiusParams, thetaParams, phiParams
+from Input import radiusParams, thetaParams, phiParams, massParams
 
 #===============================================================================#
 # import external dependencies                                                  #
@@ -13,7 +13,9 @@ from Input import radiusParams, thetaParams, phiParams
 from copy import deepcopy
 import numpy as np
 import pandas as pd
-import tqdm
+import pdb
+import pyDOE
+from scipy.stats.distributions import expon
 
 #===============================================================================#
 # BaseClass definition                                                          #
@@ -57,7 +59,7 @@ class BaseClass:
         # take out any key word arguments which aren't desired as attributes
         kwargs1 = {}
         if 'verbose' in kwargs: kwargs1['verbose'] = kwargs.pop( 'verbose' )
-        numReplicates = kwargs.pop( 'numReplicates' ) if 'numReplicates' in kwargs else 20
+        numReplicates = kwargs.pop( 'numReplicates' ) if 'numReplicates' in kwargs else 30
 
         # look for any previously saved state and load it if it exists
         self.loadState( **kwargs1 )
@@ -171,7 +173,7 @@ class BaseClass:
         None            None
         """
 
-        aux.printHeader(*[
+        fun.printHeader(*[
             "",
             f"treatment:\t{self.sampleRowIdx_} / {self.sample_.shape[0]}"
         ])
@@ -179,7 +181,7 @@ class BaseClass:
         while not self.runComplete_:
             # run the treatement for current treatement, specified by
             # sampleRowIdx
-            self.__runTreatment()
+            self._runTreatment()
             # increment sampleRowIdx
             self.sampleRowIdx_ += 1
             # evaluate run completion conditions, if the sample row index is
@@ -243,60 +245,50 @@ class BaseClass:
         else:
             estimators = [ 'runTime' ]
 
-        # create a container to hold all the sample factors
-        sampleFactors = {
-            'all'       : [],
-            'initial'   : [],
-            'final'     : [],
-        }
-
-        # crate containers to hold all the randomly generated factors
-        monteCarloFactors = {
-            'all'       : [],
-            'initial'   : [],
-            'final'     : [],
-        }
+        # create a container to hold all the: sample factors, random factors,
+        # and final factors
+        sampleFactors     = []
+        monteCarloFactors = []
+        finalFactors      = []
 
         # fill in the sample factors
         for starIdx in [ 0, 1, 2 ]:
-            sampleFactors['all'].append( f"mass_({starIdx})" )
-            sampleFactors['initial'].append( f"mass_({star})" )
+            sampleFactors.append( f"mass_({starIdx})" )
         for name in [ 'radius', 'theta', 'phi', 'velTheta', 'velPhi' ]:
             for starIdx in [ 0, 1, 2 ]:
                 for timeIdx in [ 0, -1 ]:
                     colName = f"{name}_({starIdx},{timeIdx})"
-                    sampleFactors['all'].append( colName )
                     if timeIdx == 0:
-                        sampleFactors['initial'].append( colName )
+                        sampleFactors.append( colName )
                     else:
-                        sampleFactors['final'].append( colName )
+                        finalFactors.append( colName )
 
         # fill in the monte carlo factors
-        for name in [ 'speed' ]
+        for name in [ 'speed' ]:
             for starIdx in [ 0, 1, 2 ]:
                 for timeIdx in [ 0, -1 ]:
                     colName = f"{name}_({starIdx},{timeIdx})"
-                    monteCarloFactors['all'].append( colName )
                     if timeIdx == 0:
-                        monteCarloFactors['initial'].append( colName )
+                        monteCarloFactors.append( colName )
                     else:
-                        monteCarloFactors['final'].append( colName )
+                        finalFactors.append( colName )
 
         # other columns, usefull for EDA and tracking
-        misc = [ 'treatment', 'replicate' , "outcome", 'steps' ]
+        miscFactors = [ 'treatment', 'replicate' , "outcome", 'steps' ]
 
         # add columns
         self.estimators_        = estimators
         self.sampleFactors_     = sampleFactors
-        self.monteCarloFactors  = monteCarloFactors
-        self.factors_           = sampleFactors['all'] + monteCarloFactors['all']
-        self.miscColumns        = misc
-        self.columns_           = estimators + misc + self.factors_
+        self.monteCarloFactors_ = monteCarloFactors
+        self.finalFactors_      = finalFactors
+        self.factors_           = sampleFactors + monteCarloFactors + finalFactors + miscFactors
+        self.miscFactors_       = miscFactors
+        self.columns_           = estimators + self.factors_
 
         # add numbers of columns
         self.numEstimators_         = len( estimators )
-        self.numSampleFactors       = len( sampleFactors )
-        self.numMonteCarloFactors   = len( monteCarloFactors )
+        self.numSampleFactors_      = len( sampleFactors )
+        self.numMonteCarloFactors_  = len( monteCarloFactors )
         self.numFactors_            = len( self.factors_ )
         self.numColumns_            = len( self.columns_ )
 
@@ -328,16 +320,13 @@ class BaseClass:
         if method == 'latin':
             self.__generateLatinHCsample( *args, **kwargs )
 
-        else:
-            raise KeyError, f"{mehod} hasn't been defined yet!"
-
     def _runTreatment( self, **kwargs ):
         """
         run Monte Carlo scenarios for the given replicate
         """
 
         while self.replicateCounter_ < self.numReplicates_:
-            print( f"replicate:\t{self.replicateCounter_} / {self.numReplicates_}" )
+            print( f"\nreplicate:\t{self.replicateCounter_} / {self.numReplicates_}" )
             # run monte carlo scenario
             self._runMonteCarloScenario( **kwargs )
             # increment replicate counter
@@ -421,4 +410,40 @@ class BaseClass:
         """
         generate latin hyper-cube as pd.DataFrame and save it as sample_
         """
-        NotImplemented
+
+        # construct basic latin hypercube using pyDOE
+        lhs = pyDOE.lhs(
+            len( self.sampleFactors_ ), # number of sample factors
+            criterion = "corr" # minimize the maximum correlation coefficient
+        )
+
+        # organize columns into a lookup-dictionary
+        columns = { col : idx for ( idx , col ) in enumerate( self.sampleFactors_ ) }
+
+        # go through each column in the sample factors and ajust it to reflect
+        # sim values
+        for colName, colIdx in columns.items():
+
+            # for all columns except radius, have the new value be old value
+            # scaled and shifted to reflect the range between the min & max of
+            # the desired values
+            if 'mass' in colName:
+                lhs[ : , colIdx ] *= ( massParams[1] - massParams[0] )
+                lhs[ : , colIdx ] += massParams[0]
+            elif 'theta' in colName.lower():
+                lhs[ : , colIdx ] *= ( thetaParams[1] - thetaParams[0] )
+                lhs[ : , colIdx ] += thetaParams[0]
+            elif 'phi' in colName.lower():
+                lhs[ : , colIdx ] *= ( phiParams[1] - phiParams[0] )
+                lhs[ : , colIdx ] += phiParams[0]
+            # for all the radius columns, convert to exponential pdf
+            elif 'radius' in colName:
+                lhs[ : , colIdx ] *= ( np.log( radiusParams[1] ) - np.log( radiusParams[0] ))
+                lhs[ : , colIdx ] + np.log( radiusParams[0] )
+                lhs[ : , colIdx ] = np.exp( lhs[ : , colIdx ] )
+
+        # convert lhs to pd.DataFrame
+        df = pd.DataFrame( columns=self.sampleFactors_, data=lhs )
+
+        # add sample
+        self.sample_ = df
