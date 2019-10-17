@@ -4,7 +4,7 @@
 #===============================================================================#
 
 from BaseClass import BaseClass
-from Input import radiusParams, thetaParams, phiParams, massParams, speedParams, maxT
+from Input import radiusParams, thetaParams, phiParams, massParams, speedParams, maxT, G
 
 import Functions as fun
 
@@ -15,6 +15,7 @@ import Functions as fun
 from copy import deepcopy
 import numpy as np
 import pandas as pd
+import pdb
 
 #===============================================================================#
 # Simulation definition                                                         #
@@ -190,7 +191,7 @@ class Simulation( BaseClass ):
         xdot_i3 = fun.spc2xyz( spcdot_i3 )
 
         # find star radii
-        radii_i1 = fun.stellarRadiiLookup( m_i1 )
+        r_i1 = fun.stellarRadiiLookup( m_i1 )
 
         # set starting run time and step counter
         steps, time = 0, 0
@@ -204,11 +205,12 @@ class Simulation( BaseClass ):
         x_i3_t    = deepcopy( x_i3 )
         xdot_i3_t = deepcopy( xdot_i3 )
 
-        # initialize time step using smallest allowed radius & initial velocity
-        dt = fun.timeStep( radiusParams[0], xdot_i3 )
+        # initialize time step using smallest quotent of distance/100 & initial
+        # speed
+        dt = fun.timeStep( x_i3, xdot_i3, initial=True )
 
         # run through simulation until any terminition conditions are met
-        while all([ collision, ejection, timeLimit ]):
+        while not all([ collision, ejection, timeLimit ]):
 
             # find change in velocity
             dv_i3 = fun.RungeKutta4(
@@ -231,13 +233,13 @@ class Simulation( BaseClass ):
             time += dt
 
             # see if any stars collided
-            collision = fun.checkCollision( x_i3_t )
+            collision = fun.checkCollision( x_i3_t, r_i1 )
 
             # see if any stars are moving to fast
             ejection = fun.checkEjection( xdot_i3_t, x_i3_t, m_i1 )
 
             # see if timit limit has been exceeded
-            timeLimit = ( timet >= maxT )
+            timeLimit = ( time >= maxT )
 
             # update time step
             dt = fun.timeStep( dx_i3, xdot_i3_t )
@@ -301,5 +303,7 @@ class Simulation( BaseClass ):
 #===============================================================================#
 
 if __name__ == "__main__":
-    sim = Simulation()
+    sim = Simulation(
+        nTreatments = 100
+    )
     sim.run()

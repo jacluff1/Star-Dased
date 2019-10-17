@@ -21,7 +21,8 @@ def generic():
 # import internal dependencies                                                  #
 #===============================================================================#
 
-from Input import G, speedParams, thetaParams, phiParams, massParams
+from Input import G, radiusParams, speedParams, thetaParams, phiParams, massParams
+import Input
 
 #===============================================================================#
 # import external dependencies                                                  #
@@ -173,7 +174,10 @@ def toPickle( toFile, fromObject, **kwargs ):
     None            None
     """
 
-    toFile = f"data/{toFile}.pkl"
+    if os.path.isdir( "data" ):
+        toFile = f"data/{toFile}.pkl"
+    elif os.path.isdir( "../data" ):
+        toFile = f"../data/{toFile}.pkl"
 
     pickle.dump(
         fromObject,             # object to write
@@ -205,14 +209,16 @@ def fromPickle( fromFile, **kwargs ):
     toObject        dict (or other object)
     """
 
-    fromFile = f"data/{fromFile}.pkl"
-
-    if os.path.isfile( fromFile ):
-        toObject = pickle.load(
-            open( fromFile, 'rb' ) # read the byte file
-        )
+    if os.path.isfile( f"data/{fromFile}.pkl" ):
+        fromFile = f"data/{fromFile}.pkl"
+    elif os.path.isfile( f"../data/{fromFile}.pkl" ):
+        fromFile = f"../data/{fromFile}.pkl"
     else:
-        toObject = {}
+        return {}
+
+    toObject = pickle.load(
+        open( fromFile, 'rb' ) # read the byte file
+    )
 
     return toObject
 
@@ -252,7 +258,7 @@ def escapeSpeed( x_i3, m_i1 ):
     # find the pair-wise difference vectors
     x_ij3 = pairwiseDifferenceVector( x_i3 )
 
-    # find the pai-wise distances
+    # find the pair-wise distances
     x_ij = pairwiseDistance( x_ij3 )
 
     # calculate intermidiary result
@@ -263,11 +269,12 @@ def escapeSpeed( x_i3, m_i1 ):
     # "from body"
     alpha_i1 = alpha_ij.sum( axis=1 )[:,None]
 
-    # calculate escape speed for all stars
-    speed_i1 = np.sqrt( 2 * G * alpha_i1 )
+    # calculate escape speed for all stars, converting so (km/2) comes out
+    speed_i1 = np.sqrt( 2 * G * alpha_i1 / Input.km2ly )
+
     return speed_i1
 
-def nBodyAcceleration( x_ij3, m_i1 ):
+def nBodyAcceleration( x_i3, m_i1, **kwargs ):
     """
     ( i , j , 3 )
     i --> on body
@@ -280,16 +287,17 @@ def nBodyAcceleration( x_ij3, m_i1 ):
 
     # find pair-wise distances
     x_ij = pairwiseDistance( x_ij3 )
+    x_ij[ x_ij == 0 ] = 1
 
     # find pair-wise force directions
     hat_ij3 = x_ij3 / x_ij[:,:,None]
-    np.nan_to_num( hat_ij3, copy=False )
+    # np.nan_to_num( hat_ij3, copy=False )
 
     # find pair-wise mass product
-    m_ij = m_i1 * m_i1[:,0]
+    m_ij = m_i1 * m_i1.T
 
     # find piece-wise force of gravity
-    f_ij3 = hat_ij3 * G * m_ij[:,:,None] / x_ij[:,:,None]
+    f_ij3 = hat_ij3 * G * m_ij[:,:,None] / x_ij[:,:,None]**2
 
     # sum up forces along ( 1 - from body ) to get forces on bodies
     f_i3 = f_ij3.sum( axis=1 )
@@ -313,7 +321,7 @@ def pairwiseDistance( x, **kwargs ):
 
     # use he pairwise difference vectors to find pairwise distance ( sum along
     # spacial dimention )
-    x_ij = np.sqrt( ( x_ij3**2 ).sum( axis=2 ) )
+    x_ij = np.sqrt( ( x_ij3**2 ).sum( axis=2, keepdims=True ) )
     return x_ij
 
 def RungeKutta4( f, dt, x, *args ):
@@ -323,16 +331,25 @@ def RungeKutta4( f, dt, x, *args ):
     k4  = f( x + dt, *args )
 
     delta_y = dt * ( k1 + 2*k23 + 2*k23 + k4 ) / 6
+    pdb.set_trace()
     return delta_y
 
-def timeStep( dx_i3, xdot_i3 ):
+def timeStep( x_i3, xdot_i3, **kwargs ):
 
-    try:
-        dx = np.sqrt( ( dx_i3**2 ).sum( axis=1 ) )
-    except:
-        dx = dx_i3
-    vel = np.sqrt( ( xdot_i3**2 ).sum( axis=1 ) )
-    return ( dx / vel ).min()
+    initial = kwargs['initial'] if 'initial' in kwargs else False
+
+    if initial:
+        # x_i3 is position vectors, find the distance and divide by 100
+        dx = pairwiseDistance( x_i3 ) / 100.0
+    else:
+        # x_i3 is the position updae
+        dx = x_i3
+
+    # find the speeds
+    dspeed_i1 = np.sqrt( ( xdot_i3**2 ).sum( axis=1, keepdims=True ) )
+    # calulate time step, take the minimum quotient
+    delta_t = ( dx_i3 / speed_i3 ).min()
+    return delta_t
 
 #===============================================================================#
 # printing                                                                      #
@@ -488,10 +505,14 @@ def randomSpeed( maxSpeed_i1 ):
         # construct allowable speed value
         speed = np.linspace( *speedArgs )
 
+        # select random index
+        randIdx = np.random.randint( speedArgs[2] )
+
         # fill in random radial value and dicrection
-        spcdot_i3[ starIdx, 0] = speed[
-            np.random.randint( speedArgs[2] + 1 )
-        ]
+        try:
+            spcdot_i3[ starIdx, 0] = speed[ randIdx ]
+        except:
+            pdb.set_trace()
 
     return spcdot_i3
 
@@ -522,5 +543,5 @@ def checkEjection( xdot_i3, x_i3, m_i1 ):
     speed = np.sqrt( ( xdot_i3**2 ).sum( axis=1 ) )
 
     # determine any eminent ejections
-    ejection = ( speed > maxSpeed )
+    ejections = ( speed > maxSpeed )
     return np.any( ejections )
