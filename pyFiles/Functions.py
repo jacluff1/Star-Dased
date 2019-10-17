@@ -255,11 +255,8 @@ def escapeSpeed( x_i3, m_i1 ):
 
     warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide" )
 
-    # find the pair-wise difference vectors
-    x_ij3 = pairwiseDifferenceVector( x_i3 )
-
     # find the pair-wise distances
-    x_ij = pairwiseDistance( x_ij3 )
+    x_ij = pairwiseDistance( x_i3 )
 
     # calculate intermidiary result
     alpha_ij = m_i1 / x_ij + m_i1.T / x_ij
@@ -267,7 +264,7 @@ def escapeSpeed( x_i3, m_i1 ):
 
     # sum up all ( mass : distance ) contributions along axis = 1 = j,
     # "from body"
-    alpha_i1 = alpha_ij.sum( axis=1 )[:,None]
+    alpha_i1 = alpha_ij.sum( axis=1, keepdims=True )
 
     # calculate escape speed for all stars, converting so (km/2) comes out
     speed_i1 = np.sqrt( 2 * G * alpha_i1 / Input.km2ly )
@@ -321,7 +318,7 @@ def pairwiseDistance( x, **kwargs ):
 
     # use he pairwise difference vectors to find pairwise distance ( sum along
     # spacial dimention )
-    x_ij = np.sqrt( ( x_ij3**2 ).sum( axis=2, keepdims=True ) )
+    x_ij = np.sqrt( ( x_ij3**2 ).sum( axis=2 ) )
     return x_ij
 
 def RungeKutta4( f, dt, x, *args ):
@@ -331,7 +328,6 @@ def RungeKutta4( f, dt, x, *args ):
     k4  = f( x + dt, *args )
 
     delta_y = dt * ( k1 + 2*k23 + 2*k23 + k4 ) / 6
-    pdb.set_trace()
     return delta_y
 
 def timeStep( x_i3, xdot_i3, **kwargs ):
@@ -339,16 +335,20 @@ def timeStep( x_i3, xdot_i3, **kwargs ):
     initial = kwargs['initial'] if 'initial' in kwargs else False
 
     if initial:
-        # x_i3 is position vectors, find the distance and divide by 100
-        dx = pairwiseDistance( x_i3 ) / 100.0
+        # if finding initial time step, x_i3 is position vectors;
+        # find the magnitudes and divide by 100
+        dx_i1 = np.sqrt( ( x_i3**2 ).sum( axis=1, keepdims=True ) ) / 100.0
     else:
-        # x_i3 is the position updae
-        dx = x_i3
+        # if executed during while loop, x_i3 is dx_i3; just find the magnitudes
+        dx_i1 = np.sqrt( ( x_i3**2 ).sum( axis=1, keepdims=True ) )
+
+    # convert dx_i1 from ly --> km
+    dx_i1 /= Input.km2ly
 
     # find the speeds
     dspeed_i1 = np.sqrt( ( xdot_i3**2 ).sum( axis=1, keepdims=True ) )
     # calulate time step, take the minimum quotient
-    delta_t = ( dx_i3 / speed_i3 ).min()
+    delta_t = ( dx_i1 / dspeed_i1 ).min()
     return delta_t
 
 #===============================================================================#
@@ -540,8 +540,9 @@ def checkEjection( xdot_i3, x_i3, m_i1 ):
     maxSpeed = escapeSpeed( x_i3, m_i1 )
 
     # calculate the speed of each body
-    speed = np.sqrt( ( xdot_i3**2 ).sum( axis=1 ) )
+    speed = np.sqrt( ( xdot_i3**2 ).sum( axis=1, keepdims=True ) )
 
+    pdb.set_trace()
     # determine any eminent ejections
     ejections = ( speed > maxSpeed )
     return np.any( ejections )
