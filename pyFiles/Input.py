@@ -21,6 +21,8 @@ pc2ly = 3.26156
 m2km = 1e-3
 # meter to light year
 m2ly = 1.057e-16
+# kilometer to lightyear
+km2ly = 1.057e-13
 
 # kilogram to solar mass
 kg2solar = 5.02785e-31
@@ -52,7 +54,7 @@ radiusParams = (
     # smallest placement radius = radius of smallest star ( light year )
     0.63 * sr2ly,
     # maximum placement radius ( light year )
-    10 * pc2ly,
+    1.0 * pc2ly,
     # number of allowed positions
     18,
     )

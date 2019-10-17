@@ -59,7 +59,9 @@ class BaseClass:
         # take out any key word arguments which aren't desired as attributes
         kwargs1 = {}
         if 'verbose' in kwargs: kwargs1['verbose'] = kwargs.pop( 'verbose' )
-        numReplicates = kwargs.pop( 'numReplicates' ) if 'numReplicates' in kwargs else 30
+        if 'addTail' in kwargs: kwargs1['addTail'] = kwargs.pop( 'addTail' )
+        if 'nTreatments' in kwargs: kwargs1['nTreatments'] = kwargs.pop( 'nTreatments' )
+        numReplicates = kwargs.pop( 'numReplicates' ) if 'numReplicates' in kwargs else 32
 
         # look for any previously saved state and load it if it exists
         self.loadState( **kwargs1 )
@@ -173,11 +175,6 @@ class BaseClass:
         None            None
         """
 
-        fun.printHeader(*[
-            "",
-            f"treatment:\t{self.sampleRowIdx_} / {self.sample_.shape[0]}"
-        ])
-
         while not self.runComplete_:
             # run the treatement for current treatement, specified by
             # sampleRowIdx
@@ -186,7 +183,7 @@ class BaseClass:
             self.sampleRowIdx_ += 1
             # evaluate run completion conditions, if the sample row index is
             # greater than the number of rows in sample_
-            self.runComplete_ = ( self.sampleRowIdx_ >= self.sample_.shape[ 0 ] )
+            self.runComplete_ = ( self.sampleRowIdx_ > self.sample_.shape[ 0 ] )
 
     #===========================================================================#
     # semi-protected methods                                                    #
@@ -213,10 +210,16 @@ class BaseClass:
         ========================================================================
         None            None
         """
+
+        addTail = kwargs['addTail'] if 'addTail' in kwargs else False
+
         fun.printDict( dictionary, **kwargs )
         if len( dictionary ) > 0:
             for key,value in dictionary.items():
-                setattr( self, key + '_', value )
+                if addTail:
+                    setattr( self, f"{key}_", value )
+                else:
+                    setattr( self, key, value )
 
     def _generateMetaData( self, *args, **kwargs ):
         """
@@ -325,14 +328,27 @@ class BaseClass:
         run Monte Carlo scenarios for the given replicate
         """
 
+        # treatment number
+        n1 = self.sampleRowIdx_ + 1
+
+        fun.printHeader(*[
+            "",
+            f"treatment:\t{n1} / {self.sample_.shape[0]}",
+        ], verbose = True )
+
         while self.replicateCounter_ < self.numReplicates_:
-            print( f"\nreplicate:\t{self.replicateCounter_} / {self.numReplicates_}" )
+            # replicate number
+            n2 = self.replicateCounter_ + 1
+            print( f"replicate:\t{n2} / {self.numReplicates_}" )
             # run monte carlo scenario
             self._runMonteCarloScenario( **kwargs )
             # increment replicate counter
             self.replicateCounter_ += 1
             # save sim state
             self.saveState( **kwargs )
+
+        # reset the replicate counter for next treatment
+        self.replicateCounter_ = 0
 
     #===========================================================================#
     # semi-protected                                                            #
@@ -411,14 +427,19 @@ class BaseClass:
         generate latin hyper-cube as pd.DataFrame and save it as sample_
         """
 
+        nTreatments = kwargs['nTreatments'] if 'nTreatments' in kwargs else len( self.sampleFactors_ )
+
         # construct basic latin hypercube using pyDOE
         lhs = pyDOE.lhs(
-            len( self.sampleFactors_ ), # number of sample factors
+            nTreatments, # the number of treatments
             criterion = "corr" # minimize the maximum correlation coefficient
         )
 
         # organize columns into a lookup-dictionary
         columns = { col : idx for ( idx , col ) in enumerate( self.sampleFactors_ ) }
+
+        # create dictionary to collect results
+        results = {}
 
         # go through each column in the sample factors and ajust it to reflect
         # sim values
@@ -438,12 +459,16 @@ class BaseClass:
                 lhs[ : , colIdx ] += phiParams[0]
             # for all the radius columns, convert to exponential pdf
             elif 'radius' in colName:
-                lhs[ : , colIdx ] *= ( np.log( radiusParams[1] ) - np.log( radiusParams[0] ))
-                lhs[ : , colIdx ] + np.log( radiusParams[0] )
-                lhs[ : , colIdx ] = np.exp( lhs[ : , colIdx ] )
+                # lhs[ : , colIdx ] *= ( np.log( radiusParams[1] ) - np.log( radiusParams[0] ))
+                # lhs[ : , colIdx ] + np.log( radiusParams[0] )
+                # lhs[ : , colIdx ] = np.exp( lhs[ : , colIdx ] )
+                lhs[ : , colIdx ] *= ( radiusParams[1] - radiusParams[0] )
+                lhs[ : , colIdx ] += radiusParams[0]
+            # add the column to results
+            results[ colName ] = lhs[ : , colIdx ]
 
         # convert lhs to pd.DataFrame
-        df = pd.DataFrame( columns=self.sampleFactors_, data=lhs )
+        df = pd.DataFrame( results )
 
         # add sample
         self.sample_ = df
