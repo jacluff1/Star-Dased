@@ -196,61 +196,38 @@ class BaseClass:
         else:
             estimators = [ 'runTime', 'collide', 'eject', 'survive' ]
 
-
         # define monte carlo columns
         mc = [ 'treatmentN', 'monteCarloN' ]
 
-        # create empty lists to hold columns for control factors, random
-        # factors, and ending sim values
-        control, random, sim = [], [], []
+        # grab the constant factors from Input
+        constant = list( inp.constantFactors.keys() )
 
-        # put initial star radius positions in control factors
+        # grab control fractors from Input
+        control = list( inp.controlFactors.keys() )
 
-        # create dictionary to hold all constants (factors degraded to
-        # constants for sim's sake)
-        constants
+        # grab the random factors from Input
+        random = inp.randomFactors
 
+        # create an empty list to hold misc sim values and final values
+        sim = [ 'nSteps' ]
+        # fill in the columns for final sim values
+        for starIdx in [ 1, 2, 3 ]:
+            for coordinateIdx in range(3):
+                for name in [ 'pos', 'vel' ]:
+                    colName = f"{name}_({starIdx},{coordinateIdx},-1)"
+                    sim.append( colName )
 
-        # fill in the sample factors
-        for starIdx in [ 0, 1, 2 ]:
-            sampleFactors.append( f"mass_({starIdx})" )
-        for name in [ 'radius', 'theta', 'phi', 'velTheta', 'velPhi' ]:
-            for starIdx in [ 0, 1, 2 ]:
-                for timeIdx in [ 0, -1 ]:
-                    colName = f"{name}_({starIdx},{timeIdx})"
-                    if timeIdx == 0:
-                        sampleFactors.append( colName )
-                    else:
-                        finalFactors.append( colName )
-
-        # fill in the monte carlo factors
-        for name in [ 'speed' ]:
-            for starIdx in [ 0, 1, 2 ]:
-                for timeIdx in [ 0, -1 ]:
-                    colName = f"{name}_({starIdx},{timeIdx})"
-                    if timeIdx == 0:
-                        monteCarloFactors.append( colName )
-                    else:
-                        finalFactors.append( colName )
-
-        # other columns, usefull for EDA and tracking
-        miscFactors = [ 'treatment', 'replicate' , "outcome", 'steps' ]
-
-        # add columns
-        self.estimators_        = estimators
-        self.sampleFactors_     = sampleFactors
-        self.monteCarloFactors_ = monteCarloFactors
-        self.finalFactors_      = finalFactors
-        self.factors_           = sampleFactors + monteCarloFactors + finalFactors + miscFactors
-        self.miscFactors_       = miscFactors
-        self.columns_           = estimators + self.factors_
-
-        # add numbers of columns
-        self.numEstimators_         = len( estimators )
-        self.numSampleFactors_      = len( sampleFactors )
-        self.numMonteCarloFactors_  = len( monteCarloFactors )
-        self.numFactors_            = len( self.factors_ )
-        self.numColumns_            = len( self.columns_ )
+        # make a column name collection
+        self.colNames = {
+            'all'           : constant + control + estimators + mc + random + sim,
+            'constant'      : constant
+            'control'       : control,
+            'estimators'    : estimators,
+            'monteCarlo'    : mc,
+            'random'        : random,
+            'sample'        : mc + control + estimators,
+            'sim'           : sim,
+        }
 
     #===========================================================================#
     # semi-protected                                                            #

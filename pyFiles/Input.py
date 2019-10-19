@@ -43,7 +43,7 @@ G = 6.67408e-11 * m2km**2 * m2ly / kg2solar
 # parameters                                                                    #
 #===============================================================================#
 
-# control factors
+# constant factors
 # (starIdx, coordinateIdx, timeIdx)
 constantFactors = {
     'pos_(1,1,0)' : np.pi/2,    # star 1, initial theta pos (radians)
@@ -58,23 +58,26 @@ constantFactors = {
     'vel_(3,2,0)' : np.pi/2     # star 3, initial phi vel (radians)
 }
 
+# control factors
+# (starIdx, coordinateIdx, timeIdx)
+controlFactors = {
+    'pos_(1,0,0)'   : ( 0.1, 5.0 ), # star 1 initial radial position limits (ly)
+    'pos_(2,0,0)'   : ( 0.1, 5.0 ), # star 2 initial radial position limits (ly)
+    'pos_(3,0,0)'   : ( 0.1, 5.0 ), # star 3 initial radial position limits (ly)
+    'pos_(3,1,0)'   : ( 0.0, np.pi/2 ), # star 3 initial polar pos angle limits (ly)
+    'mass_(0)'      : ( 0.08, 50 ), # star 1 mass limits (solar mass)
+    'mass_(1)'      : ( 0.08, 50 ), # star 2 mass limits (solar mass)
+    'mass_(2)'      : ( 0.08, 50 ), # star 3 mass limits (solar mass)
+    'vel_(3,1,0)'   : ( np.pi/2, (3/2)*np.pi ), # star 3 initial polar vel angle limits (radians)
+}
+
 # random factors
-
 # (starIdx, coordinateIdx, timeIdx)
-# pos_(i,0,0), initial radial position parameters: min, max (ly)
-radiusParams = ( 0.1 , 5.0 )
-
-# (starIdx, coordinateIdx, timeIdx)
-# pos_(3,2,0), polar angle parameters: min, max (radians)
-thetaParams1 = ( 0 , (1/2)*np.pi )
-
-# (starIdx)
-# mass_(i), mass parameters: min, max (solar mass)
-massParams = ( 0.08, 50 )
-
-# (starIdx, coordinateIdx, timeIdx)
-# vel_(3,2,0), polar angle parameters: min, max (radians)
-thetaParams2 = ( (1/2)*np.pi, (3/2)*np.pi )
+randomFactors = [
+    'vel_(1,0,0)', # star 1 iniital speed (km/s)
+    'vel_(2,0,0)', # star 2 initial speed (km/s)
+    'vel_(3,0,0)', # star 3 initial speed (km/s)
+]
 
 # max run time ( s )
 maxT = 10 * kyr2s

@@ -112,11 +112,6 @@ class Simulation( BaseClass ):
     # semi-protected methods                                                    #
     #===========================================================================#
 
-    #===========================================================================#
-    # semi-protected methods                                                    #
-    # required for BaseClass, implemented here                                  #
-    #===========================================================================#
-
     def _runScenario( self, **kwargs ):
 
         # scenario number
@@ -253,10 +248,16 @@ class Simulation( BaseClass ):
         # end
 
     #===========================================================================#
-    # semi-private                                                              #
+    # semi-protected methods                                                    #
+    # required for BaseClass, implemented here                                  #
     #===========================================================================#
 
-    def __generateConstantFactors( self ):
+    def _getSample( self ):
+        NotImplemented
+
+    #===========================================================================#
+    # semi-private                                                              #
+    #===========================================================================#
 
     # depricated, use for new method decoding sample to use for sim
     # def __generateLatinHCsample( self, *args, **kwargs ):
