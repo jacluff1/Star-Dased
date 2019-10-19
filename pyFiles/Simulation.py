@@ -96,57 +96,6 @@ class Simulation( BaseClass ):
         """
         self.data_ = pd.DataFrame( columns=self.columns_ )
 
-    def _generateSampleSpace( self, **kwargs ):
-        """
-        use:
-        Method shall add a dictionary, accessed by self.factorSpace_, where the keys
-        are the sampleFactors and the values are np.arrays of all allowed values
-        included in the factor space.
-
-        The keys in sampleFactors_ must remain constant, but it is allowed to
-        adjust the factor space (for example, expand the factor space, narrow it
-        down around a percieved richer space, etc..). Every time the model is
-        instantiated, it will retain its previous runs and re-set up the factor
-        space it is considering.
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-
-        self.sampleSpace_ = {
-            # having radii in exponential space will allow denser sampling
-            # at small radii and sparser sampling at the upper limits of radii
-            # this assumes that smaller radii from CM is more likely.
-            'radius'    : np.exp( -np.linspace(
-            np.log( radiusParams[0] ),
-            np.log( radiusParams[1] ),
-            radiusParams[2]
-            )),
-            'theta'     : np.linspace( *thetaParams, endpoint=False ),
-            'phi'       : np.linspace( *phiParams  , endpoint=False ),
-            'mass'      : np.linspace( *massParams )
-        }
-
-        lines = [
-            "",
-            'Sample Space:',
-            f"radius:\t{radiusParams}",
-            f"theta:\t{thetaParams}",
-            f"phi:\t{phiParams}",
-            f"mass:\t{massParams}"
-        ]
-        fun.printHeader( *lines, **kwargs )
-
     def _runMonteCarloScenario( self, **kwargs ):
 
         # use the sampleRowIdx to get treatement values
@@ -207,46 +156,22 @@ class Simulation( BaseClass ):
 
         # initialize time step using smallest quotent of distance/100 & initial
         # speed
-        dt = fun.timeStep( x_i3, xdot_i3, initial=True )
+        dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=1e-3 )
 
         # run through simulation until any terminition conditions are met
         while not all([ collision, ejection, timeLimit ]):
-
-            # find change in velocity
-            dv_i3 = fun.RungeKutta4(
-                fun.nBodyAcceleration, # function to integrate
-                dt, # time step to use
-                x_i3_t, # current position
-                m_i1, # other arguments for function ( mass )
-            )
-
-            # update velocity
-            xdot_i3_t += dv_i3
-
-            # find the change in position
-            dx_i3 = xdot_i3_t * dt
-
-            # update positions
-            x_i3_t += dx_i3
-
-            # shift positions to CM
-            CM_13 = fun.findCM( x_i3, m_i1 )
-            x_i3 -= CM_13
-
-            # update time
-            time += dt
+            pdb.set_trace()
+            # update time, time step, positions, and velocities
+            time, dt, x_i3_t, xdot_i3_t = fun.nBodyRungeKutta4( time, dt, x_i3_t, xdot_i3_t, m_i1 )
 
             # see if any stars collided
             collision = fun.checkCollision( x_i3_t, r_i1 )
 
             # see if any stars are moving to fast
-            ejection = fun.checkEjection( xdot_i3_t, x_i3_t, m_i1 )
+            ejection = fun.checkEjection( x_i3_t, xdot_i3_t, m_i1 )
 
             # see if timit limit has been exceeded
             timeLimit = ( time >= maxT )
-
-            # update time step
-            dt = fun.timeStep( dx_i3, xdot_i3_t )
 
             # increment step counter
             steps += 1

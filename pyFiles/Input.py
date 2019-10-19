@@ -36,8 +36,8 @@ kyr2s = yr2s * 1e3
 # constants                                                                     #
 #===============================================================================#
 
-# gravitational constant ( km/s^2 ) ( ly )^2 ( solar mass )^-2
-G = 6.67408e-11 * m2km * m2ly**2 / kg2solar
+# gravitational constant ( km/s )^2 ( ly )^1 ( solar mass )^-1
+G = 6.67408e-11 * m2km**2 * m2ly / kg2solar
 
 #===============================================================================#
 # parameters                                                                    #

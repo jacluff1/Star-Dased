@@ -76,7 +76,7 @@ class BaseClass:
 
         # only generate a sample if it doesn't already exist
         if not hasattr( self, 'sample_' ):
-            self._generateSample( **kwargs1 )
+            self._importSample( **kwargs1 )
 
         # only generate empty data if none exist
         if not hasattr( self, 'data_' ):
@@ -295,34 +295,6 @@ class BaseClass:
         self.numFactors_            = len( self.factors_ )
         self.numColumns_            = len( self.columns_ )
 
-    def _generateSample( self, *args, **kwargs ):
-        """
-        use:
-        choose the method for generating a treatment sample.
-
-        Current Options:
-        latin (needs implementing)
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        sampleMethod    str             used to choose sampling method
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-
-        method = kwargs['sampleMethod'] if 'sampleMethod' in kwargs else 'latin'
-
-        if method == 'latin':
-            self.__generateLatinHCsample( *args, **kwargs )
-
     def _runTreatment( self, **kwargs ):
         """
         run Monte Carlo scenarios for the given replicate
@@ -379,36 +351,6 @@ class BaseClass:
 
         NotImplemented
 
-    def _generateSampleSpace( self, **kwargs ):
-        """
-        use:
-        The child class needs to define this class for itself. However, it
-        shall add a dictionary, accessed by self.factorSpace_, where the keys
-        are the sampleFactors and the values are np.arrays of all allowed values
-        included in the factor space.
-
-        The keys in sampleFactors_ must remain constant, but it is allowed to
-        adjust the factor space (for example, expand the factor space, narrow it
-        down around a percieved richer space, etc..). Every time the model is
-        instantiated, it will retain its previous runs and re-set up the factor
-        space it is considering.
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-
-        NotImplemented
-
     def _runMonteCarloScenario( self, *args, **kwargs ):
         """
         do everything required to run an individual monte carlo scenario for
@@ -422,53 +364,54 @@ class BaseClass:
     # super()                                                                   #
     #===========================================================================#
 
-    def __generateLatinHCsample( self, *args, **kwargs ):
-        """
-        generate latin hyper-cube as pd.DataFrame and save it as sample_
-        """
-
-        nTreatments = kwargs['nTreatments'] if 'nTreatments' in kwargs else len( self.sampleFactors_ )
-
-        # construct basic latin hypercube using pyDOE
-        lhs = pyDOE.lhs(
-            nTreatments, # the number of treatments
-            criterion = "corr" # minimize the maximum correlation coefficient
-        )
-
-        # organize columns into a lookup-dictionary
-        columns = { col : idx for ( idx , col ) in enumerate( self.sampleFactors_ ) }
-
-        # create dictionary to collect results
-        results = {}
-
-        # go through each column in the sample factors and ajust it to reflect
-        # sim values
-        for colName, colIdx in columns.items():
-
-            # for all columns except radius, have the new value be old value
-            # scaled and shifted to reflect the range between the min & max of
-            # the desired values
-            if 'mass' in colName:
-                lhs[ : , colIdx ] *= ( massParams[1] - massParams[0] )
-                lhs[ : , colIdx ] += massParams[0]
-            elif 'theta' in colName.lower():
-                lhs[ : , colIdx ] *= ( thetaParams[1] - thetaParams[0] )
-                lhs[ : , colIdx ] += thetaParams[0]
-            elif 'phi' in colName.lower():
-                lhs[ : , colIdx ] *= ( phiParams[1] - phiParams[0] )
-                lhs[ : , colIdx ] += phiParams[0]
-            # for all the radius columns, convert to exponential pdf
-            elif 'radius' in colName:
-                # lhs[ : , colIdx ] *= ( np.log( radiusParams[1] ) - np.log( radiusParams[0] ))
-                # lhs[ : , colIdx ] + np.log( radiusParams[0] )
-                # lhs[ : , colIdx ] = np.exp( lhs[ : , colIdx ] )
-                lhs[ : , colIdx ] *= ( radiusParams[1] - radiusParams[0] )
-                lhs[ : , colIdx ] += radiusParams[0]
-            # add the column to results
-            results[ colName ] = lhs[ : , colIdx ]
-
-        # convert lhs to pd.DataFrame
-        df = pd.DataFrame( results )
-
-        # add sample
-        self.sample_ = df
+    # depricated, use for new method decoding sample to use for sim
+    # def __generateLatinHCsample( self, *args, **kwargs ):
+    #     """
+    #     generate latin hyper-cube as pd.DataFrame and save it as sample_
+    #     """
+    #
+    #     nTreatments = kwargs['nTreatments'] if 'nTreatments' in kwargs else len( self.sampleFactors_ )
+    #
+    #     # construct basic latin hypercube using pyDOE
+    #     lhs = pyDOE.lhs(
+    #         nTreatments, # the number of treatments
+    #         criterion = "corr" # minimize the maximum correlation coefficient
+    #     )
+    #
+    #     # organize columns into a lookup-dictionary
+    #     columns = { col : idx for ( idx , col ) in enumerate( self.sampleFactors_ ) }
+    #
+    #     # create dictionary to collect results
+    #     results = {}
+    #
+    #     # go through each column in the sample factors and ajust it to reflect
+    #     # sim values
+    #     for colName, colIdx in columns.items():
+    #
+    #         # for all columns except radius, have the new value be old value
+    #         # scaled and shifted to reflect the range between the min & max of
+    #         # the desired values
+    #         if 'mass' in colName:
+    #             lhs[ : , colIdx ] *= ( massParams[1] - massParams[0] )
+    #             lhs[ : , colIdx ] += massParams[0]
+    #         elif 'theta' in colName.lower():
+    #             lhs[ : , colIdx ] *= ( thetaParams[1] - thetaParams[0] )
+    #             lhs[ : , colIdx ] += thetaParams[0]
+    #         elif 'phi' in colName.lower():
+    #             lhs[ : , colIdx ] *= ( phiParams[1] - phiParams[0] )
+    #             lhs[ : , colIdx ] += phiParams[0]
+    #         # for all the radius columns, convert to exponential pdf
+    #         elif 'radius' in colName:
+    #             # lhs[ : , colIdx ] *= ( np.log( radiusParams[1] ) - np.log( radiusParams[0] ))
+    #             # lhs[ : , colIdx ] + np.log( radiusParams[0] )
+    #             # lhs[ : , colIdx ] = np.exp( lhs[ : , colIdx ] )
+    #             lhs[ : , colIdx ] *= ( radiusParams[1] - radiusParams[0] )
+    #             lhs[ : , colIdx ] += radiusParams[0]
+    #         # add the column to results
+    #         results[ colName ] = lhs[ : , colIdx ]
+    #
+    #     # convert lhs to pd.DataFrame
+    #     df = pd.DataFrame( results )
+    #
+    #     # add sample
+    #     self.sample_ = df

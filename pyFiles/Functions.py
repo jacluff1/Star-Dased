@@ -67,28 +67,29 @@ def stellarRadiiLookup( m_i1 ):
 
     # pull mass and radius columns from table, reversing order to be in
     # numerical order.
-    mass  = table.mass.values[::-1]
-    radii = table.radius.values[::-1]
+    mass   = table.mass.values[::-1] # solar mass
+    radii  = table.radius.values[::-1] # solar radii
+    radii *= Input.sr2ly # ly
 
     # allowable mass values
-    mass1 = np.linspace( *massParams )
+    mass1 = np.linspace( *massParams ) # solar mass
 
     # interpolate lower resolution table values
-    radii1 = np.interp( mass1, mass, radii )
+    radii1 = np.interp( mass1, mass, radii ) # ly
 
     # create empty stellar radius array
     radius = np.zeros((
         m_i1.shape[0], # number of bodies
         1
-    ))
+    )) # ly
 
     for starIdx, starMass in enumerate( m_i1 ):
         # find the radius index by looking up the mass index
-        idx = findIdx( starMass, mass1 )
+        idx = findIdx( starMass, mass1 ) # int
         # fill in the star radius
-        radius[ starIdx, 0 ] = radii1[ idx ]
+        radius[ starIdx, 0 ] = radii1[ idx ] # ly
 
-    return radius
+    return radius # ly
 
 #===============================================================================#
 # coordinate frames                                                             #
@@ -111,39 +112,39 @@ def findCM( x_i3, m_i1, **kwargs ):
     ============================================================================
     None            None
     """
-    CM = ( m_i1 * x_i3 ).sum( axis=0 ) / m_i1.sum()
-    return CM[None,:]
+    CM = ( m_i1 * x_i3 ).sum( axis=0 ) / m_i1.sum() # ly
+    return CM[None,:] # ly
 
 def spc2xyz( spc_i3, **kwargs ):
 
-    r = spc_i3[:,0]
+    r = spc_i3[:,0] # ly
 
-    sinTheta = np.sin( spc_i3[:,1] )
-    cosTheta = np.cos( spc_i3[:,1] )
+    sinTheta = np.sin( spc_i3[:,1] ) # float
+    cosTheta = np.cos( spc_i3[:,1] ) # float
 
-    sinPhi = np.sin( spc_i3[:,2] )
-    cosPhi = np.cos( spc_i3[:,2] )
+    sinPhi = np.sin( spc_i3[:,2] ) # float
+    cosPhi = np.cos( spc_i3[:,2] ) # float
 
-    x_i3 = np.zeros( spc_i3.shape )
+    x_i3 = np.zeros( spc_i3.shape ) # ly
 
-    x_i3[:,0] = r * sinTheta * cosPhi
-    x_i3[:,1] = r * sinTheta * sinPhi
-    x_i3[:,2] = r * cosTheta
+    x_i3[:,0] = r * sinTheta * cosPhi # ly
+    x_i3[:,1] = r * sinTheta * sinPhi # ly
+    x_i3[:,2] = r * cosTheta # ly
 
-    return x_i3
+    return x_i3 # ly
 
 def xyz2spc( x_i3, **kwargs ):
 
-    r   = np.sqrt( ( x_i3**2 ).sum( axis=1 ) )
-    rho = np.sqrt( ( x_i3[:,:2]**2 ).sum( axis=1 ) )
+    r   = np.sqrt( ( x_i3**2 ).sum( axis=1 ) ) # ly
+    rho = np.sqrt( ( x_i3[:,:2]**2 ).sum( axis=1 ) ) # ly
 
-    spc = np.zeros( x_i3.shape )
+    spc = np.zeros( x_i3.shape ) # ly
 
-    spc[:,0] = r
-    spc[:,1] = np.arctan( rho / x_i3[:,2] )
-    spc[:,2] = np.arctan( x_i3[:,1] / x_i3[:,0] )
+    spc[:,0] = r # ly
+    spc[:,1] = np.arctan( rho / x_i3[:,2] ) # radians
+    spc[:,2] = np.arctan( x_i3[:,1] / x_i3[:,0] ) # radians
 
-    return spc
+    return spc # [ ly, radians, radians ]
 
 #===============================================================================#
 # file handling                                                                 #
@@ -256,22 +257,22 @@ def escapeSpeed( x_i3, m_i1 ):
     warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide" )
 
     # find the pair-wise distances
-    x_ij = pairwiseDistance( x_i3 )
+    x_ij = pairwiseDistance( x_i3 ) # ly
 
     # calculate intermidiary result
-    alpha_ij = m_i1 / x_ij + m_i1.T / x_ij
+    alpha_ij = m_i1 / x_ij + m_i1.T / x_ij # solar mass ly^-1
     np.nan_to_num( alpha_ij, posinf=0, copy=False )
 
     # sum up all ( mass : distance ) contributions along axis = 1 = j,
     # "from body"
-    alpha_i1 = alpha_ij.sum( axis=1, keepdims=True )
+    alpha_i1 = alpha_ij.sum( axis=1, keepdims=True ) # solar mass ly^-1
 
     # calculate escape speed for all stars, converting so (km/2) comes out
-    speed_i1 = np.sqrt( 2 * G * alpha_i1 / Input.km2ly )
+    speed_i1 = np.sqrt( 2 * G * alpha_i1 ) # km/s
 
-    return speed_i1
+    return speed_i1 # km/s
 
-def nBodyAcceleration( x_i3, m_i1, **kwargs ):
+def nBodyAcceleration( x_i3, m_i1 ):
     """
     ( i , j , 3 )
     i --> on body
@@ -280,76 +281,106 @@ def nBodyAcceleration( x_i3, m_i1, **kwargs ):
     """
 
     # find pair-wise difference vectors
-    x_ij3 = pairwiseDifferenceVector( x_i3, **kwargs )
+    x_ij3 = pairwiseDifferenceVector( x_i3 ) # ly
 
     # find pair-wise distances
-    x_ij = pairwiseDistance( x_ij3 )
+    x_ij = pairwiseDistance( x_ij3 ) # ly
     x_ij[ x_ij == 0 ] = 1
 
     # find pair-wise force directions
     hat_ij3 = x_ij3 / x_ij[:,:,None]
-    # np.nan_to_num( hat_ij3, copy=False )
 
     # find pair-wise mass product
-    m_ij = m_i1 * m_i1.T
+    m_ij = m_i1 * m_i1.T # (solar mass)^2
 
     # find piece-wise force of gravity
-    f_ij3 = hat_ij3 * G * m_ij[:,:,None] / x_ij[:,:,None]**2
+    f_ij3  = hat_ij3 * G * m_ij[:,:,None] / x_ij[:,:,None]**2 # (solar mass) (km/s)^2 (ly)^-1
+    f_ij3 *= Input.km2ly # (solar mass) (km/s^2)
 
     # sum up forces along ( 1 - from body ) to get forces on bodies
-    f_i3 = f_ij3.sum( axis=1 )
+    f_i3 = f_ij3.sum( axis=1 ) # (solar mass) (km/s^2)
 
     # get acellerations on bodies
-    a_i3 = f_i3 / m_i1
-    return a_i3
+    a_i3 = f_i3 / m_i1 # km/s^2
+    return a_i3 # km/s^2
 
-def pairwiseDifferenceVector( x_i3, **kwargs ):
-    x_ij3 = x_i3 - x_i3[:,None,:]
-    return x_ij3
+def pairwiseDifferenceVector( x_i3 ):
+    x_ij3 = x_i3 - x_i3[:,None,:] # ly
+    return x_ij3 # ly
 
-def pairwiseDistance( x, **kwargs ):
+def pairwiseDistance( x ):
 
     # determine if x is of form x_ij3
     if len( x.shape ) == 3:
-        x_ij3 = x
+        x_ij3 = x # ly
     # or if x is of form x_i3
     elif len( x.shape ) == 2:
-        x_ij3 = pairwiseDifferenceVector( x )
+        x_ij3 = pairwiseDifferenceVector( x ) # ly
 
     # use he pairwise difference vectors to find pairwise distance ( sum along
     # spacial dimention )
-    x_ij = np.sqrt( ( x_ij3**2 ).sum( axis=2 ) )
-    return x_ij
+    x_ij = np.sqrt( ( x_ij3**2 ).sum( axis=2 ) ) # ly
+    return x_ij # ly
 
-def RungeKutta4( f, dt, x, *args ):
+def nBodyRungeKutta4( time, dt, x_i3, xdot_i3, m_i1 ):
+    """
+    http://spiff.rit.edu/richmond/nbody/OrbitRungeKutta4.pdf
+    """
 
-    k1  = f( x, *args )
-    k23 = f( x + dt/2, *args )
-    k4  = f( x + dt, *args )
+    # find coefficients for RK4
+    kr1  = xdot_i3 # km/s
+    kr1 *= Input.km2ly # ly/s
+    kv1  = nBodyAcceleration( x_i3, m_i1 ) # km/s^2
 
-    delta_y = dt * ( k1 + 2*k23 + 2*k23 + k4 ) / 6
-    return delta_y
+    kr2  = xdot_i3 * kv1 * dt/2 # km/s
+    kr2 *= Input.km2ly # ly/s
+    kv2  = nBodyAcceleration( x_i3 + kr1 * dt/2, m_i1 ) # km/s^2
+
+    kr3  = xdot_i3 * kv2 * dt/2 # km/s
+    kr3 *= Input.km2ly # ly/s
+    kv3  = nBodyAcceleration( x_i3 + kr2 * dt/2, m_i1 ) # km/s^2
+
+    kr4  = xdot_i3 * kv3 * dt # km/s
+    kr4 *= Input.km2ly # ly/s
+    kv4  = nBodyAcceleration( x_i3 + kr3 * dt/2, m_i1 ) # km/s^2
+
+    # update positions and velocities
+    x_i3    += ( dt/6 ) * ( kr1 + 2*kr2 + 2*kr3 + kr4 ) # ly
+    xdot_i3 += ( dt/6 ) * ( kv1 + 2*kv2 + 2*kv3 + kv4 ) # km/s^2
+
+    # shift positions relative to CM
+    CM_13 = findCM( x_i3, m_i1 ) # ly
+    x_i3 -= CM_13 # ly
+
+    # update time
+    time += dt # s
+
+    # update time-step
+    dt = timeStep( x_i3, xdot_i3 ) # s
+
+    # output time, time-step, positions, and velocities
+    return time, dt, x_i3, xdot_i3 # s, s, ly, km/s
 
 def timeStep( x_i3, xdot_i3, **kwargs ):
 
     initial = kwargs['initial'] if 'initial' in kwargs else False
-    scale = kwargs['scale'] if 'scale' in kwargs else 1e-6
+    scale = kwargs['scale'] if 'scale' in kwargs else 1e-8
 
     # if finding initial time step, x_i3 is position vectors
-    dx_i1 = np.sqrt( ( x_i3**2 ).sum( axis=1, keepdims=True ) )
+    dx_i1 = np.sqrt( ( x_i3**2 ).sum( axis=1, keepdims=True ) ) # ly
 
     if initial:
         # find the magnitudes and divide by 100
-        dx_i1 = np.sqrt( ( x_i3**2 ).sum( axis=1, keepdims=True ) ) * scale
+        dx_i1 = np.sqrt( ( x_i3**2 ).sum( axis=1, keepdims=True ) ) * scale # ly
 
     # convert dx_i1 from ly --> km
-    dx_i1 /= Input.km2ly
+    dx_i1 /= Input.km2ly # km
 
     # find the speeds
-    xdot_i1 = np.sqrt( ( xdot_i3**2 ).sum( axis=1, keepdims=True ) )
+    xdot_i1 = np.sqrt( ( xdot_i3**2 ).sum( axis=1, keepdims=True ) ) # km/s
     # calulate time step, take the minimum quotient
-    delta_t = ( dx_i1 / xdot_i1 ).min()
-    return delta_t
+    delta_t = ( dx_i1 / xdot_i1 ).min() # s
+    return delta_t # s
 
 #===============================================================================#
 # printing                                                                      #
@@ -490,31 +521,31 @@ def printList( list1, **kwargs ):
 def randomSpeed( maxSpeed_i1 ):
 
     # make empty array with same shape as input
-    spcdot_i3 = np.zeros( maxSpeed_i1.shape )
+    spcdot_i3 = np.zeros( maxSpeed_i1.shape ) # km/s
 
     # fill in random angles
     for starIdx, maxSpeed in enumerate( maxSpeed_i1 ):
 
         # construct speed args
         speedArgs = (
-            speedParams[0], # min speed
-            maxSpeed.item(), # max speed
-            speedParams[1], # number of allowed values
+            speedParams[0], # min speed (km/s)
+            maxSpeed.item(), # max speed (km/s)
+            speedParams[1], # number of allowed values (int)
         )
 
         # construct allowable speed value
-        speed = np.linspace( *speedArgs )
+        speed = np.linspace( *speedArgs ) # km/s
 
         # select random index
-        randIdx = np.random.randint( speedArgs[2] )
+        randIdx = np.random.randint( speedArgs[2] ) # int
 
         # fill in random radial value and dicrection
         try:
-            spcdot_i3[ starIdx, 0] = speed[ randIdx ]
+            spcdot_i3[ starIdx, 0] = speed[ randIdx ] # km/s
         except:
             pdb.set_trace()
 
-    return spcdot_i3
+    return spcdot_i3 # km/s
 
 #===============================================================================#
 # termination conditions                                                        #
@@ -523,26 +554,26 @@ def randomSpeed( maxSpeed_i1 ):
 def checkCollision( x_i3, r_i1 ):
 
     # find the pair-wise distance for each body
-    x_ij = pairwiseDistance( x_i3 )
+    x_ij = pairwiseDistance( x_i3 ) # ly
 
     # find the pair-wise sum of radii
-    r_ij = r_i1 + r_i1.T
+    r_ij = r_i1 + r_i1.T # ly
     # convert diagonal to 0, since these pairs are not viable sim pairs
     np.fill_diagonal( r_ij, 0 )
 
     # determine any collitions
-    collisions = ( r_ij > x_ij )
-    return np.any( collisions )
+    collisions = ( r_ij > x_ij ) # ly
+    return np.any( collisions ) # bool
 
-def checkEjection( xdot_i3, x_i3, m_i1 ):
+def checkEjection( x_i3, xdot_i3, m_i1 ):
 
     # determine the escape velocity from the system for each body
-    maxSpeed = escapeSpeed( x_i3, m_i1 )
+    vEscape_i1 = escapeSpeed( x_i3, m_i1 ) # km/s
 
     # calculate the speed of each body
-    speed = np.sqrt( ( xdot_i3**2 ).sum( axis=1, keepdims=True ) )
+    speed_i1 = np.sqrt( ( xdot_i3**2 ).sum( axis=1, keepdims=True ) ) # km/s
 
     # determine any eminent ejections
-    ejections = ( speed > maxSpeed )
+    ejections = ( speed > maxSpeed ) # km/s
     pdb.set_trace()
-    return np.any( ejections )
+    return np.any( ejections ) # bool
