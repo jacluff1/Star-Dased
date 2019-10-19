@@ -333,22 +333,22 @@ def RungeKutta4( f, dt, x, *args ):
 def timeStep( x_i3, xdot_i3, **kwargs ):
 
     initial = kwargs['initial'] if 'initial' in kwargs else False
+    scale = kwargs['scale'] if 'scale' in kwargs else 1e-6
+
+    # if finding initial time step, x_i3 is position vectors
+    dx_i1 = np.sqrt( ( x_i3**2 ).sum( axis=1, keepdims=True ) )
 
     if initial:
-        # if finding initial time step, x_i3 is position vectors;
         # find the magnitudes and divide by 100
-        dx_i1 = np.sqrt( ( x_i3**2 ).sum( axis=1, keepdims=True ) ) / 100.0
-    else:
-        # if executed during while loop, x_i3 is dx_i3; just find the magnitudes
-        dx_i1 = np.sqrt( ( x_i3**2 ).sum( axis=1, keepdims=True ) )
+        dx_i1 = np.sqrt( ( x_i3**2 ).sum( axis=1, keepdims=True ) ) * scale
 
     # convert dx_i1 from ly --> km
     dx_i1 /= Input.km2ly
 
     # find the speeds
-    dspeed_i1 = np.sqrt( ( xdot_i3**2 ).sum( axis=1, keepdims=True ) )
+    xdot_i1 = np.sqrt( ( xdot_i3**2 ).sum( axis=1, keepdims=True ) )
     # calulate time step, take the minimum quotient
-    delta_t = ( dx_i1 / dspeed_i1 ).min()
+    delta_t = ( dx_i1 / xdot_i1 ).min()
     return delta_t
 
 #===============================================================================#
@@ -542,7 +542,7 @@ def checkEjection( xdot_i3, x_i3, m_i1 ):
     # calculate the speed of each body
     speed = np.sqrt( ( xdot_i3**2 ).sum( axis=1, keepdims=True ) )
 
-    pdb.set_trace()
     # determine any eminent ejections
     ejections = ( speed > maxSpeed )
+    pdb.set_trace()
     return np.any( ejections )

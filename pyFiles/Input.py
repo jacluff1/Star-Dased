@@ -100,4 +100,4 @@ speedParams = (
 )
 
 # max run time ( s )
-maxT = 100 * kyr2s
+maxT = 10 * kyr2s
