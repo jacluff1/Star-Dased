@@ -4,7 +4,7 @@
 #===============================================================================#
 
 import Functions as fun
-from Input import radiusParams, thetaParams, phiParams, massParams
+import Input as inp
 
 #===============================================================================#
 # import external dependencies                                                  #
@@ -14,8 +14,6 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 import pdb
-import pyDOE
-from scipy.stats.distributions import expon
 
 #===============================================================================#
 # BaseClass definition                                                          #
@@ -71,10 +69,6 @@ class BaseClass:
         # only generate a sample if it doesn't already exist
         if not hasattr( self, 'sample_' ):
             self._getSample( **kwargs1 )
-
-        # only generate empty data if none exist
-        if not hasattr( self, 'data_' ):
-            self._generateEmptyData( **kwargs1 )
 
         # add any remaining kwargs as attributes, will override previous state
         # if any keys conflict
@@ -181,18 +175,18 @@ class BaseClass:
         adds list of all columns, factor space columns, estimator columns,
         number of factors, and number of estimators
 
-        ============================================================================
+        ========================================================================
         input:          type:           description:
-        ============================================================================
+        ========================================================================
         args:           type:           description:
         *args           tuple, str      column name(s) of estimators
 
         kwargs:         type:           description:
         verbose         bool            flag to print, default = False
 
-        ============================================================================
+        ========================================================================
         output:         type:
-        ============================================================================
+        ========================================================================
         None            None
         """
 
@@ -200,13 +194,22 @@ class BaseClass:
         if len( args ) > 0:
             estimators = list( args )
         else:
-            estimators = [ 'runTime' ]
+            estimators = [ 'runTime', 'collide', 'eject', 'survive' ]
 
-        # create a container to hold all the: sample factors, random factors,
-        # and final factors
-        sampleFactors     = []
-        monteCarloFactors = []
-        finalFactors      = []
+
+        # define monte carlo columns
+        mc = [ 'treatmentN', 'monteCarloN' ]
+
+        # create empty lists to hold columns for control factors, random
+        # factors, and ending sim values
+        control, random, sim = [], [], []
+
+        # put initial star radius positions in control factors
+
+        # create dictionary to hold all constants (factors degraded to
+        # constants for sim's sake)
+        constants
+
 
         # fill in the sample factors
         for starIdx in [ 0, 1, 2 ]:
@@ -253,9 +256,6 @@ class BaseClass:
     # semi-protected                                                            #
     # any methods defined here need to be implemnted in the child class         #
     #===========================================================================#
-
-    def _generateEmptyData( self ):
-        NotImplemented
 
     def _getSample( self, *args, **kwargs ):
         NotImplemented

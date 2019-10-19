@@ -96,7 +96,7 @@ class Simulation( BaseClass ):
         while not self.runComplete_:
             # run the treatement for current treatement, specified by
             # sampleRowIdx
-            self._runTreatment()
+            self._runScenario()
             # increment sampleRowIdx
             self.sampleRowIdx_ += 1
             # evaluate run completion conditions, if the sample row index is
@@ -117,57 +117,15 @@ class Simulation( BaseClass ):
     # required for BaseClass, implemented here                                  #
     #===========================================================================#
 
-    def _generateEmptyData( self, **kwargs ):
-        """
-        use:
-        Method shall add an empty pd.DataFrame, accessed by self.data_. the
-        DataFrame will hold all the generated data from all the random walks
-        from all the initial states defined in the generated sample ( found in
-        self.sample_ )
+    def _runScenario( self, **kwargs ):
 
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-        self.data_ = pd.DataFrame( columns=self.columns_ )
-
-    def _runTreatment( self, **kwargs ):
-        """
-        run Monte Carlo scenarios for the given replicate
-        """
-
-        # treatment number
+        # scenario number
         n1 = self.sampleRowIdx_ + 1
 
         fun.printHeader(*[
             "",
-            f"treatment:\t{n1} / {self.sample_.shape[0]}",
+            f"scenario:\t{n1} / {self.sample_.shape[0]}",
         ], verbose = True )
-
-        while self.replicateCounter_ < self.numReplicates_:
-            # replicate number
-            n2 = self.replicateCounter_ + 1
-            print( f"replicate:\t{n2} / {self.numReplicates_}" )
-            # run monte carlo scenario
-            self._runMonteCarloScenario( **kwargs )
-            # increment replicate counter
-            self.replicateCounter_ += 1
-            # save sim state
-            self.saveState( **kwargs )
-
-        # reset the replicate counter for next treatment
-        self.replicateCounter_ = 0
-
-    def _runMonteCarloScenario( self, **kwargs ):
 
         # use the sampleRowIdx to get treatement values
         sampleRow = self.sample_.iloc[ self.sampleRowIdx_ ]
@@ -297,6 +255,8 @@ class Simulation( BaseClass ):
     #===========================================================================#
     # semi-private                                                              #
     #===========================================================================#
+
+    def __generateConstantFactors( self ):
 
     # depricated, use for new method decoding sample to use for sim
     # def __generateLatinHCsample( self, *args, **kwargs ):

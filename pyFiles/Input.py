@@ -43,61 +43,38 @@ G = 6.67408e-11 * m2km**2 * m2ly / kg2solar
 # parameters                                                                    #
 #===============================================================================#
 
-# initial mass function parameters: alpha1, alpha2, m1, m2, m3
-IMFparams = 1.3, 2.3, 0.08, 0.5, 100.0
+# control factors
+# (starIdx, coordinateIdx, timeIdx)
+constantFactors = {
+    'pos_(1,1,0)' : np.pi/2,    # star 1, initial theta pos (radians)
+    'pos_(2,1,0)' : np.pi/2,    # star 2, initial theta pos (radians)
+    'pos_(1,2,0)' : 0.0,        # star 1, initial phi pos (radians)
+    'pos_(2,2,0)' : np.pi,      # star 2, initial phi pos (radians)
+    'pos_(3,2,0)' : 0.0,        # star 3, initial phi pos (radians)
+    'vel_(1,1,0)' : np.pi/2     # star 1, initial theta vel (radians)
+    'vel_(2,1,0)' : np.pi/2     # star 2, initial theta vel (radians)
+    'vel_(1,2,0)' : np.pi/2     # star 1, initial phi vel (radians)
+    'vel_(2,2,0)' : (3/2)*np.pi # star 2, initial phi vel (radians)
+    'vel_(3,2,0)' : np.pi/2     # star 3, initial phi vel (radians)
+}
 
-# mass array for IMF PDF, the number density of stars (in solar mass)
-IMFmass = np.linspace( 0.08, 100, 1000 )
+# random factors
 
-# initial CM radius parameters
-radiusParams = (
-    # smallest placement radius = radius of smallest star ( light year )
-    0.63 * sr2ly,
-    # maximum placement radius ( light year )
-    1.0 * pc2ly,
-    # number of allowed positions
-    18,
-    )
+# (starIdx, coordinateIdx, timeIdx)
+# pos_(i,0,0), initial radial position parameters: min, max (ly)
+radiusParams = ( 0.1 , 5.0 )
 
-# polar angle parameters
-thetaParams = (
-    # smallest angle ( radians )
-    0.0,
-    # largest angle ( radians )
-    np.pi,
-    # number of allowed positions
-    18,
-)
+# (starIdx, coordinateIdx, timeIdx)
+# pos_(3,2,0), polar angle parameters: min, max (radians)
+thetaParams1 = ( 0 , (1/2)*np.pi )
 
-# azimuthal angle parameters
-phiParams = (
-    # smallest angle to allow ( radians )
-    0.0,
-    # largest angle to allow ( radians )
-    2 * np.pi,
-    # number of allowed positions
-    18,
-)
+# (starIdx)
+# mass_(i), mass parameters: min, max (solar mass)
+massParams = ( 0.08, 50 )
 
-# mass parameters
-massParams = (
-    # minimum mass ( solar mass )
-    0.08,
-    # maximum mass ( solar mass )
-    100,
-    # number of allowed positions
-    18,
-)
-
-# initial speed parameters
-speedParams = (
-    # minimum initial speed ( km/s )
-    0.0,
-    # maximum spped computed after placement in order to always start less than
-    # escape velocity from the system
-    # number of allowed positions
-    100,
-)
+# (starIdx, coordinateIdx, timeIdx)
+# vel_(3,2,0), polar angle parameters: min, max (radians)
+thetaParams2 = ( (1/2)*np.pi, (3/2)*np.pi )
 
 # max run time ( s )
 maxT = 10 * kyr2s
