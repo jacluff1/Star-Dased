@@ -19,7 +19,7 @@ printf "activating vertial environment in $venvSource;\ntype 'deactivate' to lea
 source ${venvSource}
 
 # install/upgrade packages
-declare -a packages="pip ipython numpy pandas scipy pyDOE matplotlib sklearn torch tqdm"
+declare -a packages="pip ipython numpy pandas scipy pyDOE matplotlib sklearn"
 for i in ${packages[@]}; do
     printf "\ninstalling/upgrading $i\n"
     pip install -U $i
