@@ -79,5 +79,11 @@ randomFactors = [
     'vel_(3,0,0)', # star 3 initial speed (km/s)
 ]
 
+# random factor paramaters
+randomFactorParams = (
+    0.0, # lower limit on initial speed (km/s)
+    16, # number of values to choose from (int)
+)
+
 # max run time ( s )
 maxT = 10 * kyr2s

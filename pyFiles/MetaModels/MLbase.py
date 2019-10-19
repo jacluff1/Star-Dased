@@ -4,9 +4,9 @@
 #===============================================================================#
 
 from BaseClass import BaseClass
-from Input import radiusParams, thetaParams, phiParams
 
 import Functions as fun
+import Input as inp
 
 #===============================================================================#
 # import external dependencies                                                  #
@@ -82,11 +82,3 @@ class MLbase( BaseClass ):
     # semi-private                                                              #
     # sampling                                                                  #
     #===========================================================================#
-
-#===============================================================================#
-# main                                                                          #
-#===============================================================================#
-
-if __name__ == "__main__":
-    sim = Simulation()
-    sim.run()

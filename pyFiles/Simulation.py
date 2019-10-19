@@ -4,9 +4,9 @@
 #===============================================================================#
 
 from BaseClass import BaseClass
-from Input import radiusParams, thetaParams, phiParams, massParams, speedParams, maxT, G
 
 import Functions as fun
+import Input as inp
 
 #===============================================================================#
 # import external dependencies                                                  #
@@ -195,7 +195,7 @@ class Simulation( BaseClass ):
             ejection = fun.checkEjection( x_i3_t, xdot_i3_t, m_i1 )
 
             # see if timit limit has been exceeded
-            timeLimit = ( time >= maxT )
+            timeLimit = ( time >= inp.maxT )
 
             # increment step counter
             steps += 1
