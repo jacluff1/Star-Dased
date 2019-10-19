@@ -96,42 +96,6 @@ class MLbase( BaseClass ):
         # self.data_ = pd.DataFrame( columns=self.columns_ )
         NotImplemented
 
-    def _generateSampleSpace( self, **kwargs ):
-        """
-        use:
-        Method shall add a dictionary, accessed by self.factorSpace_, where the keys
-        are the sampleFactors and the values are np.arrays of all allowed values
-        included in the factor space.
-
-        The keys in sampleFactors_ must remain constant, but it is allowed to
-        adjust the factor space (for example, expand the factor space, narrow it
-        down around a percieved richer space, etc..). Every time the model is
-        instantiated, it will retain its previous runs and re-set up the factor
-        space it is considering.
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-
-        self.factorSpace_ = {
-            NotImplemented
-        }
-
-        lines = [
-            NotImplemented
-        ]
-        fun.printHeader( *lines, **kwargs )
-
     def _runMonteCarloScenario( self, **kwargs ):
         NotImplemented
 
