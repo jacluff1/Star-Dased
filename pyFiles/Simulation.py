@@ -48,16 +48,60 @@ class Simulation( BaseClass ):
         None            None
         """
 
-        # construct smaller set of kwargs used for construction
-        kwargs1 = {}
-        if 'verbose' in kwargs: kwargs1['verbose'] = kwargs['verbose']
+        # # construct smaller set of kwargs used for construction
+        # kwargs1 = {}
+        # if 'verbose' in kwargs: kwargs1['verbose'] = kwargs['verbose']
+        numReplicates = kwargs.pop( 'numReplicates' ) if 'numReplicates' in kwargs else 32
 
         # run BaseClass constructor for Simulation instance
         super().__init__( "Simulation", *args, **kwargs )
 
+        # only add the number of replicates if it doesn't already exist
+        if not hasattr( self, 'numReplicates_' ):
+            self.numReplicates_ = numReplicates
+
+        # only add Monte Carlo replicate counter if it doesn't exist
+        if not hasattr( self, 'replicateCounter_' ): self.replicateCounter_ = 0
+
+        # only add sample row index it doesn't already exist
+        if not hasattr( self, 'sampleRowIdx_' ): self.sampleRowIdx_ = 0
+
+        # only add flag for run complete it doesn't already exist
+        if not hasattr( self, 'runComplete_' ): self.runComplete_ = False
+
     #===========================================================================#
     # public methods                                                            #
     #===========================================================================#
+
+    def run( self, *args, **kwargs ):
+        """
+        use:
+        This method runs through each treatment in sample_ and terminates when
+        __runTreatment() sets runComplete_ = True
+
+        ============================================================================
+        input:          type:           description:
+        ============================================================================
+        args:           type:           description:
+
+        kwargs:         type:           description:
+        verbose         bool            flag to print, default = False
+
+        ============================================================================
+        output:         type:
+        ============================================================================
+        None            None
+        """
+
+        while not self.runComplete_:
+            # run the treatement for current treatement, specified by
+            # sampleRowIdx
+            self._runTreatment()
+            # increment sampleRowIdx
+            self.sampleRowIdx_ += 1
+            # evaluate run completion conditions, if the sample row index is
+            # greater than the number of rows in sample_
+            self.runComplete_ = ( self.sampleRowIdx_ > self.sample_.shape[ 0 ] )
 
     #===========================================================================#
     # puplic methods                                                            #
@@ -95,6 +139,33 @@ class Simulation( BaseClass ):
         None            None
         """
         self.data_ = pd.DataFrame( columns=self.columns_ )
+
+    def _runTreatment( self, **kwargs ):
+        """
+        run Monte Carlo scenarios for the given replicate
+        """
+
+        # treatment number
+        n1 = self.sampleRowIdx_ + 1
+
+        fun.printHeader(*[
+            "",
+            f"treatment:\t{n1} / {self.sample_.shape[0]}",
+        ], verbose = True )
+
+        while self.replicateCounter_ < self.numReplicates_:
+            # replicate number
+            n2 = self.replicateCounter_ + 1
+            print( f"replicate:\t{n2} / {self.numReplicates_}" )
+            # run monte carlo scenario
+            self._runMonteCarloScenario( **kwargs )
+            # increment replicate counter
+            self.replicateCounter_ += 1
+            # save sim state
+            self.saveState( **kwargs )
+
+        # reset the replicate counter for next treatment
+        self.replicateCounter_ = 0
 
     def _runMonteCarloScenario( self, **kwargs ):
 
@@ -226,6 +297,59 @@ class Simulation( BaseClass ):
     #===========================================================================#
     # semi-private                                                              #
     #===========================================================================#
+
+    # depricated, use for new method decoding sample to use for sim
+    # def __generateLatinHCsample( self, *args, **kwargs ):
+    #     """
+    #     generate latin hyper-cube as pd.DataFrame and save it as sample_
+    #     """
+    #
+    #     nTreatments = kwargs['nTreatments'] if 'nTreatments' in kwargs else len( self.sampleFactors_ )
+    #
+    #     # construct basic latin hypercube using pyDOE
+    #     lhs = pyDOE.lhs(
+    #         nTreatments, # the number of treatments
+    #         criterion = "corr" # minimize the maximum correlation coefficient
+    #     )
+    #
+    #     # organize columns into a lookup-dictionary
+    #     columns = { col : idx for ( idx , col ) in enumerate( self.sampleFactors_ ) }
+    #
+    #     # create dictionary to collect results
+    #     results = {}
+    #
+    #     # go through each column in the sample factors and ajust it to reflect
+    #     # sim values
+    #     for colName, colIdx in columns.items():
+    #
+    #         # for all columns except radius, have the new value be old value
+    #         # scaled and shifted to reflect the range between the min & max of
+    #         # the desired values
+    #         if 'mass' in colName:
+    #             lhs[ : , colIdx ] *= ( massParams[1] - massParams[0] )
+    #             lhs[ : , colIdx ] += massParams[0]
+    #         elif 'theta' in colName.lower():
+    #             lhs[ : , colIdx ] *= ( thetaParams[1] - thetaParams[0] )
+    #             lhs[ : , colIdx ] += thetaParams[0]
+    #         elif 'phi' in colName.lower():
+    #             lhs[ : , colIdx ] *= ( phiParams[1] - phiParams[0] )
+    #             lhs[ : , colIdx ] += phiParams[0]
+    #         # for all the radius columns, convert to exponential pdf
+    #         elif 'radius' in colName:
+    #             # lhs[ : , colIdx ] *= ( np.log( radiusParams[1] ) - np.log( radiusParams[0] ))
+    #             # lhs[ : , colIdx ] + np.log( radiusParams[0] )
+    #             # lhs[ : , colIdx ] = np.exp( lhs[ : , colIdx ] )
+    #             lhs[ : , colIdx ] *= ( radiusParams[1] - radiusParams[0] )
+    #             lhs[ : , colIdx ] += radiusParams[0]
+    #         # add the column to results
+    #         results[ colName ] = lhs[ : , colIdx ]
+    #
+    #     # convert lhs to pd.DataFrame
+    #     df = pd.DataFrame( results )
+    #
+    #     # add sample
+    #     self.sample_ = df
+
 
 #===============================================================================#
 # main                                                                          #

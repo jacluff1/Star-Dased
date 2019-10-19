@@ -63,6 +63,9 @@ class MLbase( BaseClass ):
     # required for BaseClass, implemented here                                  #
     #===========================================================================#
 
+    def run( self, *args, **kwargs ):
+        NotImplemented
+
     #===========================================================================#
     # semi-protected methods                                                    #
     #===========================================================================#
@@ -96,7 +99,7 @@ class MLbase( BaseClass ):
         # self.data_ = pd.DataFrame( columns=self.columns_ )
         NotImplemented
 
-    def _runMonteCarloScenario( self, **kwargs ):
+    def _getSample( self, *args, **kwargs ):
         NotImplemented
 
     #===========================================================================#
