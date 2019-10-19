@@ -229,6 +229,10 @@ class Simulation( BaseClass ):
             # update positions
             x_i3_t += dx_i3
 
+            # shift positions to CM
+            CM_13 = fun.findCM( x_i3, m_i1 )
+            x_i3 -= CM_13
+
             # update time
             time += dt
 
