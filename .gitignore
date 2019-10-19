@@ -1,4 +1,5 @@
 # ignore folders
+legacy_pyFiles/
 StarDasedVenv/
 
 # ignore files
