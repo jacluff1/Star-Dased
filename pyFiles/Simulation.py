@@ -114,6 +114,8 @@ class Simulation( BaseClass ):
 
     def _runScenario( self, **kwargs ):
 
+        # set up---------------------------------------------------------------#
+
         # scenario number
         n1 = self.sampleRowIdx_ + 1
 
@@ -125,15 +127,28 @@ class Simulation( BaseClass ):
         # use the sampleRowIdx to get treatement values
         sampleRow = self.sample_.iloc[ self.sampleRowIdx_ ]
 
-        # extract SPC positions from sampleRow
+        # construct SPC positions
         spc_i3 = np.zeros( (3,3) )
-        for starIdx in [ 0, 1, 2 ]:
-            for colIdx, name in enumerate([ 'radius', 'theta', 'phi' ]):
-                key = f"{name}_({starIdx},0)"
-                spc_i3[ starIdx, colIdx ] = sampleRow[ key ]
+        for starIdx in [ 1, 2, 3 ]:
+            for coordinateIdx in [ 0, 1, 2 ]:
+                colName = f"pos_({starIdx},{coordinateIdx},0)"
+                if colName in inp.constantFactors:
+                    spc_i3[ starIdx, coordinateIdx ] = constantFactors[ colName ]
+                elif colName in sampleRow:
+                    spc_i3[ starIdx, coordinateIdx ] = sampleRow[ colName ]
+                else:
+                    self.__ColumnAssertion( colName )
 
-        # extract masses from sampleRow
-        m_i1 = np.array([ sampleRow[ f"mass_({starIdx})" ] for starIdx in range(3) ])[:,None]
+        # construct masses
+        m_i1 = np.zeros( (3,1) )
+        for starIdx in [ 1, 2, 3 ]:
+            colName = f"mass_({starIdx})"
+            if colName in inp.constantFactors:
+                m_i1[ starIdx, 0 ] = constantFactors[ colName ]
+            elif colName in sampleRow:
+                m_i1[ starIdx, 0 ] = sampleRow[ colName ]
+            else:
+                self.__ColumnAssertion( colName )
 
         # calculate XYZ positions
         x_i3 = fun.spc2xyz( spc_i3, **kwargs )
@@ -147,18 +162,20 @@ class Simulation( BaseClass ):
         # calculate escape velocity from system
         escapeSpeed_i1 = fun.escapeSpeed( x_i3, m_i1 )
 
-        # create container to hold spc initial velocities
+        # construct spc initial velocity vectors
         spcdot_i3 = np.zeros( (3,3) )
         # assign random speed
         spcdot_i3[ : , 0 ] = fun.randomSpeed( escapeSpeed_i1 )[:,0]
-        # fill in the polar and azimuthal angles
-        for name, colIdx in zip(
-            [ 'velTheta', 'velPhi' ],
-            [ 1         , 2        ]
-        ):
-            for starIdx in [ 0, 1, 2 ]:
-                key = f"{name}_({starIdx},0)"
-                spcdot_i3[ starIdx, colIdx ] = sampleRow[ key ]
+        # assign angles
+        for starIdx in [ 1, 2, 3 ]:
+            for coordinateIdx in [ 1, 2 ]:
+                colName = f"vel_({starIdx},{coordinateIdx},0)"
+                if colName in inp.constantFactors:
+                    spcdot_i3[ starIdx, coordinateIdx ] = inp.constantFactors[ colName ]
+                elif colName in sampleRow:
+                    spcdot_i3[ starIdx, coordinateIdx ] = sampleRow[ colName ]
+                else:
+                    self.__ColumnAssertion( colName )
 
         # calculate XYZ velocities
         xdot_i3 = fun.spc2xyz( spcdot_i3 )
@@ -178,9 +195,11 @@ class Simulation( BaseClass ):
         x_i3_t    = deepcopy( x_i3 )
         xdot_i3_t = deepcopy( xdot_i3 )
 
-        # initialize time step using smallest quotent of distance/100 & initial
+        # initialize time step using smallest quotent of distance & initial
         # speed
-        dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=1e-3 )
+        dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=inp.dt0ScaleFactor )
+
+        # run scenario simulation----------------------------------------------#
 
         # run through simulation until any terminition conditions are met
         while not all([ collision, ejection, timeLimit ]):
@@ -200,52 +219,36 @@ class Simulation( BaseClass ):
             # increment step counter
             steps += 1
 
-        # convert ending values back to SPC
-        spc_i3_t    = fun.xyz2spc( x_i3_t )
-        spcdot_i3_t = fun.xyz2spc( xdot_i3_t )
+            # convert ending values back to SPC
+            spc_i3_t    = fun.xyz2spc( x_i3_t )
+            spcdot_i3_t = fun.xyz2spc( xdot_i3_t )
 
-        # create empty container to hold scenario results
-        results = {}
+        # collect results------------------------------------------------------#
 
-        # add the run time and misc columns
-        results['runTime']   = time
-        results['treatment'] = self.sampleRowIdx_
-        results['replicate'] = self.replicateCounter_
-        results['steps']     = steps
-        if collision:
-            results['outcome'] = 'collision'
-        elif ejection:
-            results['outcome'] = 'ejection'
-        else:
-            results['outcome'] = 'fullRun'
+        # collect results for ALL columns
+        results = {
+            'runTime'   : time,
+            'collide'   : int( collision ),
+            'eject'     : int( ejection ),
+            'survive'   : int( timeLimit ),
+            'nSteps'    : steps,
+        }
+        # add all final posigion and velocities
+        for starIdx in [ 1, 2, 3 ]:
+            for coordinateIdx in [ 0, 1, 2 ]:
+                for name, array in zip(
+                    [ 'pos'   , 'vel'      ],
+                    [ spc_i3_t, spcdot_i3_t]
+                ):
+                    colName = f"{name}_({starIdx},{coordinateIdx},-1)"
+                    results[ colName ] = array[ starIdx, coordinateIdx ]
 
-        # add all positions, velocities and mass for each star
-        for starIdx in [ 0, 1, 2 ]:
+        # update sample DataFrame----------------------------------------------#
 
-            # add mass to results
-            results[ f"mass_({starIdx})" ] = m_i1[ starIdx, 0 ]
+        for colName, value in results.items():
+            self.sample_.loc[ self.sampleRowIdx_, colName ] = value
 
-            # add initial positions (SPC)
-            for colIdx, name in enumerate([ 'radius', 'theta', 'phi' ]):
-                results[ f"{name}_({starIdx},0)" ] = spc_i3[ starIdx, colIdx ]
-
-            # add final positions( (SPC)
-            for colIdx, name in enumerate([ 'radius', 'theta', 'phi' ]):
-                results[ f"{name}_({starIdx},-1)" ] = spc_i3_t[ starIdx, colIdx ]
-
-            # add initial velocities (SPC)
-            for colIdx, name in enumerate([ 'velRadial', 'velPolar', 'velAzimuthal' ]):
-                results[ f"{name}_({starIdx},0)" ] = spcdot_i3[ starIdx, colIdx ]
-
-            # add final velocities (SPC)
-            for colIdx, name in enumerate([ 'velRadial', 'velPolar', 'velAzimuthal' ]):
-                results[ f"{name}_({starIdx},-1)" ] = spcdot_i3_t[ starIdx, colIdx ]
-
-        # add the senario data to data_
-        row = pd.DataFrame( results, index=[0] )
-        self.data_ = self.data_.append( row, sort=False )
-
-        # end
+        # end------------------------------------------------------------------#
 
     #===========================================================================#
     # semi-protected methods                                                    #
@@ -259,58 +262,12 @@ class Simulation( BaseClass ):
     # semi-private                                                              #
     #===========================================================================#
 
-    # depricated, use for new method decoding sample to use for sim
-    # def __generateLatinHCsample( self, *args, **kwargs ):
-    #     """
-    #     generate latin hyper-cube as pd.DataFrame and save it as sample_
-    #     """
-    #
-    #     nTreatments = kwargs['nTreatments'] if 'nTreatments' in kwargs else len( self.sampleFactors_ )
-    #
-    #     # construct basic latin hypercube using pyDOE
-    #     lhs = pyDOE.lhs(
-    #         nTreatments, # the number of treatments
-    #         criterion = "corr" # minimize the maximum correlation coefficient
-    #     )
-    #
-    #     # organize columns into a lookup-dictionary
-    #     columns = { col : idx for ( idx , col ) in enumerate( self.sampleFactors_ ) }
-    #
-    #     # create dictionary to collect results
-    #     results = {}
-    #
-    #     # go through each column in the sample factors and ajust it to reflect
-    #     # sim values
-    #     for colName, colIdx in columns.items():
-    #
-    #         # for all columns except radius, have the new value be old value
-    #         # scaled and shifted to reflect the range between the min & max of
-    #         # the desired values
-    #         if 'mass' in colName:
-    #             lhs[ : , colIdx ] *= ( massParams[1] - massParams[0] )
-    #             lhs[ : , colIdx ] += massParams[0]
-    #         elif 'theta' in colName.lower():
-    #             lhs[ : , colIdx ] *= ( thetaParams[1] - thetaParams[0] )
-    #             lhs[ : , colIdx ] += thetaParams[0]
-    #         elif 'phi' in colName.lower():
-    #             lhs[ : , colIdx ] *= ( phiParams[1] - phiParams[0] )
-    #             lhs[ : , colIdx ] += phiParams[0]
-    #         # for all the radius columns, convert to exponential pdf
-    #         elif 'radius' in colName:
-    #             # lhs[ : , colIdx ] *= ( np.log( radiusParams[1] ) - np.log( radiusParams[0] ))
-    #             # lhs[ : , colIdx ] + np.log( radiusParams[0] )
-    #             # lhs[ : , colIdx ] = np.exp( lhs[ : , colIdx ] )
-    #             lhs[ : , colIdx ] *= ( radiusParams[1] - radiusParams[0] )
-    #             lhs[ : , colIdx ] += radiusParams[0]
-    #         # add the column to results
-    #         results[ colName ] = lhs[ : , colIdx ]
-    #
-    #     # convert lhs to pd.DataFrame
-    #     df = pd.DataFrame( results )
-    #
-    #     # add sample
-    #     self.sample_ = df
-
+    def __ColumnAssertion( self, colName ):
+        raise AssertionError, f"can't seem to find {colName}! You \
+        have to either include it in constant factors, control\
+        factors, or random factors. If you want to include\
+        any random factors, other than initial speed, you'll have to implement\
+        it!"
 
 #===============================================================================#
 # main                                                                          #
