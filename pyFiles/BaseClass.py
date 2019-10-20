@@ -220,7 +220,7 @@ class BaseClass:
         # make a column name collection
         self.colNames = {
             'all'           : constant + control + estimators + mc + random + sim,
-            'constant'      : constant
+            'constant'      : constant,
             'control'       : control,
             'estimators'    : estimators,
             'monteCarlo'    : mc,

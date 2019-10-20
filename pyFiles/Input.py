@@ -51,11 +51,11 @@ constantFactors = {
     'pos_(1,2,0)' : 0.0,        # star 1, initial phi pos (radians)
     'pos_(2,2,0)' : np.pi,      # star 2, initial phi pos (radians)
     'pos_(3,2,0)' : 0.0,        # star 3, initial phi pos (radians)
-    'vel_(1,1,0)' : np.pi/2     # star 1, initial theta vel (radians)
-    'vel_(2,1,0)' : np.pi/2     # star 2, initial theta vel (radians)
-    'vel_(1,2,0)' : np.pi/2     # star 1, initial phi vel (radians)
-    'vel_(2,2,0)' : (3/2)*np.pi # star 2, initial phi vel (radians)
-    'vel_(3,2,0)' : np.pi/2     # star 3, initial phi vel (radians)
+    'vel_(1,1,0)' : np.pi/2,     # star 1, initial theta vel (radians)
+    'vel_(2,1,0)' : np.pi/2,     # star 2, initial theta vel (radians)
+    'vel_(1,2,0)' : np.pi/2,     # star 1, initial phi vel (radians)
+    'vel_(2,2,0)' : (3/2)*np.pi, # star 2, initial phi vel (radians)
+    'vel_(3,2,0)' : np.pi/2,     # star 3, initial phi vel (radians)
 }
 
 # control factors
