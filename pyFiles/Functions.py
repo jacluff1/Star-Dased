@@ -21,7 +21,6 @@ def generic():
 # import internal dependencies                                                  #
 #===============================================================================#
 
-from Input import G, radiusParams, speedParams, thetaParams, phiParams, massParams
 import Input
 
 #===============================================================================#
@@ -71,25 +70,26 @@ def stellarRadiiLookup( m_i1 ):
     radii  = table.radius.values[::-1] # solar radii
     radii *= Input.sr2ly # ly
 
-    # allowable mass values
-    mass1 = np.linspace( *massParams ) # solar mass
+    # generate a range of masses
+    mass1 = np.linspace(
+        mass.min(), # minimum mass allowed (solar mass)
+        mass.max(), # maximum mass allowed (solar mass)
+        inp.randomFactorParams[1], # number of masses
+    )
 
     # interpolate lower resolution table values
     radii1 = np.interp( mass1, mass, radii ) # ly
 
     # create empty stellar radius array
-    radius = np.zeros((
-        m_i1.shape[0], # number of bodies
-        1
-    )) # ly
+    r_i1 = np.zeros( m_i1.shape ) # ly
 
     for starIdx, starMass in enumerate( m_i1 ):
         # find the radius index by looking up the mass index
         idx = findIdx( starMass, mass1 ) # int
         # fill in the star radius
-        radius[ starIdx, 0 ] = radii1[ idx ] # ly
+        r_i1[ starIdx, 0 ] = radii1[ idx ] # ly
 
-    return radius # ly
+    return r_i1 # ly
 
 #===============================================================================#
 # coordinate frames                                                             #
@@ -268,7 +268,7 @@ def escapeSpeed( x_i3, m_i1 ):
     alpha_i1 = alpha_ij.sum( axis=1, keepdims=True ) # solar mass ly^-1
 
     # calculate escape speed for all stars, converting so (km/2) comes out
-    speed_i1 = np.sqrt( 2 * G * alpha_i1 ) # km/s
+    speed_i1 = np.sqrt( 2 * inp.G * alpha_i1 ) # km/s
 
     return speed_i1 # km/s
 
@@ -294,7 +294,7 @@ def nBodyAcceleration( x_i3, m_i1 ):
     m_ij = m_i1 * m_i1.T # (solar mass)^2
 
     # find piece-wise force of gravity
-    f_ij3  = hat_ij3 * G * m_ij[:,:,None] / x_ij[:,:,None]**2 # (solar mass) (km/s)^2 (ly)^-1
+    f_ij3  = hat_ij3 * inp.G * m_ij[:,:,None] / x_ij[:,:,None]**2 # (solar mass) (km/s)^2 (ly)^-1
     f_ij3 *= Input.km2ly # (solar mass) (km/s^2)
 
     # sum up forces along ( 1 - from body ) to get forces on bodies
@@ -528,9 +528,9 @@ def randomSpeed( maxSpeed_i1 ):
 
         # construct speed args
         speedArgs = (
-            speedParams[0], # min speed (km/s)
+            inp.randomFactorParams[0], # min speed (km/s)
             maxSpeed.item(), # max speed (km/s)
-            speedParams[1], # number of allowed values (int)
+            inp.randomFactorParams[2], # number of allowed values (int)
         )
 
         # construct allowable speed value
@@ -540,10 +540,7 @@ def randomSpeed( maxSpeed_i1 ):
         randIdx = np.random.randint( speedArgs[2] ) # int
 
         # fill in random radial value and dicrection
-        try:
-            spcdot_i3[ starIdx, 0] = speed[ randIdx ] # km/s
-        except:
-            pdb.set_trace()
+        spcdot_i3[ starIdx, 0 ] = speed[ randIdx ] # km/s
 
     return spcdot_i3 # km/s
 

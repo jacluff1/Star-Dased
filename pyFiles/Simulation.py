@@ -4,9 +4,9 @@
 #===============================================================================#
 
 from BaseClass import BaseClass
-from Input import radiusParams, thetaParams, phiParams, massParams, speedParams, maxT, G
 
 import Functions as fun
+import Input as inp
 
 #===============================================================================#
 # import external dependencies                                                  #
@@ -48,38 +48,36 @@ class Simulation( BaseClass ):
         None            None
         """
 
-        # construct smaller set of kwargs used for construction
-        kwargs1 = {}
-        if 'verbose' in kwargs: kwargs1['verbose'] = kwargs['verbose']
+        # # construct smaller set of kwargs used for construction
+        # kwargs1 = {}
+        # if 'verbose' in kwargs: kwargs1['verbose'] = kwargs['verbose']
+        numReplicates = kwargs.pop( 'numReplicates' ) if 'numReplicates' in kwargs else 32
 
         # run BaseClass constructor for Simulation instance
         super().__init__( "Simulation", *args, **kwargs )
+
+        # only add the number of replicates if it doesn't already exist
+        if not hasattr( self, 'numReplicates_' ):
+            self.numReplicates_ = numReplicates
+
+        # only add Monte Carlo replicate counter if it doesn't exist
+        if not hasattr( self, 'replicateCounter_' ): self.replicateCounter_ = 0
+
+        # only add sample row index it doesn't already exist
+        if not hasattr( self, 'sampleRowIdx_' ): self.sampleRowIdx_ = 0
+
+        # only add flag for run complete it doesn't already exist
+        if not hasattr( self, 'runComplete_' ): self.runComplete_ = False
 
     #===========================================================================#
     # public methods                                                            #
     #===========================================================================#
 
-    #===========================================================================#
-    # puplic methods                                                            #
-    # required for BaseClass, implemented here                                  #
-    #===========================================================================#
-
-    #===========================================================================#
-    # semi-protected methods                                                    #
-    #===========================================================================#
-
-    #===========================================================================#
-    # semi-protected methods                                                    #
-    # required for BaseClass, implemented here                                  #
-    #===========================================================================#
-
-    def _generateEmptyData( self, **kwargs ):
+    def run( self, *args, **kwargs ):
         """
         use:
-        Method shall add an empty pd.DataFrame, accessed by self.data_. the
-        DataFrame will hold all the generated data from all the random walks
-        from all the initial states defined in the generated sample ( found in
-        self.sample_ )
+        This method runs through each treatment in sample_ and terminates when
+        __runTreatment() sets runComplete_ = True
 
         ============================================================================
         input:          type:           description:
@@ -94,22 +92,63 @@ class Simulation( BaseClass ):
         ============================================================================
         None            None
         """
-        self.data_ = pd.DataFrame( columns=self.columns_ )
 
-    def _runMonteCarloScenario( self, **kwargs ):
+        while not self.runComplete_:
+            # run the treatement for current treatement, specified by
+            # sampleRowIdx
+            self._runScenario()
+            # increment sampleRowIdx
+            self.sampleRowIdx_ += 1
+            # evaluate run completion conditions, if the sample row index is
+            # greater than the number of rows in sample_
+            self.runComplete_ = ( self.sampleRowIdx_ > self.sample_.shape[ 0 ] )
+
+    #===========================================================================#
+    # puplic methods                                                            #
+    # required for BaseClass, implemented here                                  #
+    #===========================================================================#
+
+    #===========================================================================#
+    # semi-protected methods                                                    #
+    #===========================================================================#
+
+    def _runScenario( self, **kwargs ):
+
+        # set up---------------------------------------------------------------#
+
+        # scenario number
+        n1 = self.sampleRowIdx_ + 1
+
+        fun.printHeader(*[
+            "",
+            f"scenario:\t{n1} / {self.sample_.shape[0]}",
+        ], verbose = True )
 
         # use the sampleRowIdx to get treatement values
         sampleRow = self.sample_.iloc[ self.sampleRowIdx_ ]
 
-        # extract SPC positions from sampleRow
+        # construct SPC positions
         spc_i3 = np.zeros( (3,3) )
-        for starIdx in [ 0, 1, 2 ]:
-            for colIdx, name in enumerate([ 'radius', 'theta', 'phi' ]):
-                key = f"{name}_({starIdx},0)"
-                spc_i3[ starIdx, colIdx ] = sampleRow[ key ]
+        for starIdx in [ 1, 2, 3 ]:
+            for coordinateIdx in [ 0, 1, 2 ]:
+                colName = f"pos_({starIdx},{coordinateIdx},0)"
+                if colName in inp.constantFactors:
+                    spc_i3[ starIdx, coordinateIdx ] = constantFactors[ colName ]
+                elif colName in sampleRow:
+                    spc_i3[ starIdx, coordinateIdx ] = sampleRow[ colName ]
+                else:
+                    self.__ColumnAssertion( colName )
 
-        # extract masses from sampleRow
-        m_i1 = np.array([ sampleRow[ f"mass_({starIdx})" ] for starIdx in range(3) ])[:,None]
+        # construct masses
+        m_i1 = np.zeros( (3,1) )
+        for starIdx in [ 1, 2, 3 ]:
+            colName = f"mass_({starIdx})"
+            if colName in inp.constantFactors:
+                m_i1[ starIdx, 0 ] = constantFactors[ colName ]
+            elif colName in sampleRow:
+                m_i1[ starIdx, 0 ] = sampleRow[ colName ]
+            else:
+                self.__ColumnAssertion( colName )
 
         # calculate XYZ positions
         x_i3 = fun.spc2xyz( spc_i3, **kwargs )
@@ -123,18 +162,20 @@ class Simulation( BaseClass ):
         # calculate escape velocity from system
         escapeSpeed_i1 = fun.escapeSpeed( x_i3, m_i1 )
 
-        # create container to hold spc initial velocities
+        # construct spc initial velocity vectors
         spcdot_i3 = np.zeros( (3,3) )
         # assign random speed
         spcdot_i3[ : , 0 ] = fun.randomSpeed( escapeSpeed_i1 )[:,0]
-        # fill in the polar and azimuthal angles
-        for name, colIdx in zip(
-            [ 'velTheta', 'velPhi' ],
-            [ 1         , 2        ]
-        ):
-            for starIdx in [ 0, 1, 2 ]:
-                key = f"{name}_({starIdx},0)"
-                spcdot_i3[ starIdx, colIdx ] = sampleRow[ key ]
+        # assign angles
+        for starIdx in [ 1, 2, 3 ]:
+            for coordinateIdx in [ 1, 2 ]:
+                colName = f"vel_({starIdx},{coordinateIdx},0)"
+                if colName in inp.constantFactors:
+                    spcdot_i3[ starIdx, coordinateIdx ] = inp.constantFactors[ colName ]
+                elif colName in sampleRow:
+                    spcdot_i3[ starIdx, coordinateIdx ] = sampleRow[ colName ]
+                else:
+                    self.__ColumnAssertion( colName )
 
         # calculate XYZ velocities
         xdot_i3 = fun.spc2xyz( spcdot_i3 )
@@ -154,9 +195,11 @@ class Simulation( BaseClass ):
         x_i3_t    = deepcopy( x_i3 )
         xdot_i3_t = deepcopy( xdot_i3 )
 
-        # initialize time step using smallest quotent of distance/100 & initial
+        # initialize time step using smallest quotent of distance & initial
         # speed
-        dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=1e-3 )
+        dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=inp.dt0ScaleFactor )
+
+        # run scenario simulation----------------------------------------------#
 
         # run through simulation until any terminition conditions are met
         while not all([ collision, ejection, timeLimit ]):
@@ -171,61 +214,60 @@ class Simulation( BaseClass ):
             ejection = fun.checkEjection( x_i3_t, xdot_i3_t, m_i1 )
 
             # see if timit limit has been exceeded
-            timeLimit = ( time >= maxT )
+            timeLimit = ( time >= inp.maxT )
 
             # increment step counter
             steps += 1
 
-        # convert ending values back to SPC
-        spc_i3_t    = fun.xyz2spc( x_i3_t )
-        spcdot_i3_t = fun.xyz2spc( xdot_i3_t )
+            # convert ending values back to SPC
+            spc_i3_t    = fun.xyz2spc( x_i3_t )
+            spcdot_i3_t = fun.xyz2spc( xdot_i3_t )
 
-        # create empty container to hold scenario results
-        results = {}
+        # collect results------------------------------------------------------#
 
-        # add the run time and misc columns
-        results['runTime']   = time
-        results['treatment'] = self.sampleRowIdx_
-        results['replicate'] = self.replicateCounter_
-        results['steps']     = steps
-        if collision:
-            results['outcome'] = 'collision'
-        elif ejection:
-            results['outcome'] = 'ejection'
-        else:
-            results['outcome'] = 'fullRun'
+        # collect results for ALL columns
+        results = {
+            'runTime'   : time,
+            'collide'   : int( collision ),
+            'eject'     : int( ejection ),
+            'survive'   : int( timeLimit ),
+            'nSteps'    : steps,
+        }
+        # add all final posigion and velocities
+        for starIdx in [ 1, 2, 3 ]:
+            for coordinateIdx in [ 0, 1, 2 ]:
+                for name, array in zip(
+                    [ 'pos'   , 'vel'      ],
+                    [ spc_i3_t, spcdot_i3_t]
+                ):
+                    colName = f"{name}_({starIdx},{coordinateIdx},-1)"
+                    results[ colName ] = array[ starIdx, coordinateIdx ]
 
-        # add all positions, velocities and mass for each star
-        for starIdx in [ 0, 1, 2 ]:
+        # update sample DataFrame----------------------------------------------#
 
-            # add mass to results
-            results[ f"mass_({starIdx})" ] = m_i1[ starIdx, 0 ]
+        for colName, value in results.items():
+            self.sample_.loc[ self.sampleRowIdx_, colName ] = value
 
-            # add initial positions (SPC)
-            for colIdx, name in enumerate([ 'radius', 'theta', 'phi' ]):
-                results[ f"{name}_({starIdx},0)" ] = spc_i3[ starIdx, colIdx ]
+        # end------------------------------------------------------------------#
 
-            # add final positions( (SPC)
-            for colIdx, name in enumerate([ 'radius', 'theta', 'phi' ]):
-                results[ f"{name}_({starIdx},-1)" ] = spc_i3_t[ starIdx, colIdx ]
+    #===========================================================================#
+    # semi-protected methods                                                    #
+    # required for BaseClass, implemented here                                  #
+    #===========================================================================#
 
-            # add initial velocities (SPC)
-            for colIdx, name in enumerate([ 'velRadial', 'velPolar', 'velAzimuthal' ]):
-                results[ f"{name}_({starIdx},0)" ] = spcdot_i3[ starIdx, colIdx ]
-
-            # add final velocities (SPC)
-            for colIdx, name in enumerate([ 'velRadial', 'velPolar', 'velAzimuthal' ]):
-                results[ f"{name}_({starIdx},-1)" ] = spcdot_i3_t[ starIdx, colIdx ]
-
-        # add the senario data to data_
-        row = pd.DataFrame( results, index=[0] )
-        self.data_ = self.data_.append( row, sort=False )
-
-        # end
+    def _getSample( self ):
+        NotImplemented
 
     #===========================================================================#
     # semi-private                                                              #
     #===========================================================================#
+
+    def __ColumnAssertion( self, colName ):
+        raise AssertionError, f"can't seem to find {colName}! You \
+        have to either include it in constant factors, control\
+        factors, or random factors. If you want to include\
+        any random factors, other than initial speed, you'll have to implement\
+        it!"
 
 #===============================================================================#
 # main                                                                          #

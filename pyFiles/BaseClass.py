@@ -4,7 +4,7 @@
 #===============================================================================#
 
 import Functions as fun
-from Input import radiusParams, thetaParams, phiParams, massParams
+import Input as inp
 
 #===============================================================================#
 # import external dependencies                                                  #
@@ -14,8 +14,6 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 import pdb
-import pyDOE
-from scipy.stats.distributions import expon
 
 #===============================================================================#
 # BaseClass definition                                                          #
@@ -60,40 +58,17 @@ class BaseClass:
         kwargs1 = {}
         if 'verbose' in kwargs: kwargs1['verbose'] = kwargs.pop( 'verbose' )
         if 'addTail' in kwargs: kwargs1['addTail'] = kwargs.pop( 'addTail' )
-        if 'nTreatments' in kwargs: kwargs1['nTreatments'] = kwargs.pop( 'nTreatments' )
-        numReplicates = kwargs.pop( 'numReplicates' ) if 'numReplicates' in kwargs else 32
 
         # look for any previously saved state and load it if it exists
         self.loadState( **kwargs1 )
 
-        # generating sample space every time, will alow factor space to be
-        # updated at any time without destroying previous results
-        self._generateSampleSpace( **kwargs1 )
-
         # only generate metadata if it doesn't already exist
         if not hasattr( self, 'factors_' ):
-            self._generateMetaData( *args, **kwargs1 )
+            self._generateColumnNames( *args, **kwargs1 )
 
         # only generate a sample if it doesn't already exist
         if not hasattr( self, 'sample_' ):
-            self._importSample( **kwargs1 )
-
-        # only generate empty data if none exist
-        if not hasattr( self, 'data_' ):
-            self._generateEmptyData( **kwargs1 )
-
-        # only add the number of replicates if it doesn't already exist
-        if not hasattr( self, 'numReplicates_' ):
-            self.numReplicates_ = numReplicates
-
-        # only add Monte Carlo replicate counter if it doesn't exist
-        if not hasattr( self, 'replicateCounter_' ): self.replicateCounter_ = 0
-
-        # only add sample row index it doesn't already exist
-        if not hasattr( self, 'sampleRowIdx_' ): self.sampleRowIdx_ = 0
-
-        # only add flag for run complete it doesn't already exist
-        if not hasattr( self, 'runComplete_' ): self.runComplete_ = False
+            self._getSample( **kwargs1 )
 
         # add any remaining kwargs as attributes, will override previous state
         # if any keys conflict
@@ -156,34 +131,7 @@ class BaseClass:
     #===========================================================================#
 
     def run( self, *args, **kwargs ):
-        """
-        use:
-        This method runs through each treatment in sample_ and terminates when
-        __runTreatment() sets runComplete_ = True
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-
-        while not self.runComplete_:
-            # run the treatement for current treatement, specified by
-            # sampleRowIdx
-            self._runTreatment()
-            # increment sampleRowIdx
-            self.sampleRowIdx_ += 1
-            # evaluate run completion conditions, if the sample row index is
-            # greater than the number of rows in sample_
-            self.runComplete_ = ( self.sampleRowIdx_ > self.sample_.shape[ 0 ] )
+        NotImplemented
 
     #===========================================================================#
     # semi-protected methods                                                    #
@@ -221,24 +169,24 @@ class BaseClass:
                 else:
                     setattr( self, key, value )
 
-    def _generateMetaData( self, *args, **kwargs ):
+    def _generateColumnNames( self, *args, **kwargs ):
         """
         use:
         adds list of all columns, factor space columns, estimator columns,
         number of factors, and number of estimators
 
-        ============================================================================
+        ========================================================================
         input:          type:           description:
-        ============================================================================
+        ========================================================================
         args:           type:           description:
         *args           tuple, str      column name(s) of estimators
 
         kwargs:         type:           description:
         verbose         bool            flag to print, default = False
 
-        ============================================================================
+        ========================================================================
         output:         type:
-        ============================================================================
+        ========================================================================
         None            None
         """
 
@@ -246,116 +194,47 @@ class BaseClass:
         if len( args ) > 0:
             estimators = list( args )
         else:
-            estimators = [ 'runTime' ]
+            estimators = [ 'runTime', 'collide', 'eject', 'survive' ]
 
-        # create a container to hold all the: sample factors, random factors,
-        # and final factors
-        sampleFactors     = []
-        monteCarloFactors = []
-        finalFactors      = []
+        # define monte carlo columns
+        mc = [ 'treatmentN', 'monteCarloN' ]
 
-        # fill in the sample factors
-        for starIdx in [ 0, 1, 2 ]:
-            sampleFactors.append( f"mass_({starIdx})" )
-        for name in [ 'radius', 'theta', 'phi', 'velTheta', 'velPhi' ]:
-            for starIdx in [ 0, 1, 2 ]:
-                for timeIdx in [ 0, -1 ]:
-                    colName = f"{name}_({starIdx},{timeIdx})"
-                    if timeIdx == 0:
-                        sampleFactors.append( colName )
-                    else:
-                        finalFactors.append( colName )
+        # grab the constant factors from Input
+        constant = list( inp.constantFactors.keys() )
 
-        # fill in the monte carlo factors
-        for name in [ 'speed' ]:
-            for starIdx in [ 0, 1, 2 ]:
-                for timeIdx in [ 0, -1 ]:
-                    colName = f"{name}_({starIdx},{timeIdx})"
-                    if timeIdx == 0:
-                        monteCarloFactors.append( colName )
-                    else:
-                        finalFactors.append( colName )
+        # grab control fractors from Input
+        control = list( inp.controlFactors.keys() )
 
-        # other columns, usefull for EDA and tracking
-        miscFactors = [ 'treatment', 'replicate' , "outcome", 'steps' ]
+        # grab the random factors from Input
+        random = inp.randomFactors
 
-        # add columns
-        self.estimators_        = estimators
-        self.sampleFactors_     = sampleFactors
-        self.monteCarloFactors_ = monteCarloFactors
-        self.finalFactors_      = finalFactors
-        self.factors_           = sampleFactors + monteCarloFactors + finalFactors + miscFactors
-        self.miscFactors_       = miscFactors
-        self.columns_           = estimators + self.factors_
+        # create an empty list to hold misc sim values and final values
+        sim = [ 'nSteps' ]
+        # fill in the columns for final sim values
+        for starIdx in [ 1, 2, 3 ]:
+            for coordinateIdx in range(3):
+                for name in [ 'pos', 'vel' ]:
+                    colName = f"{name}_({starIdx},{coordinateIdx},-1)"
+                    sim.append( colName )
 
-        # add numbers of columns
-        self.numEstimators_         = len( estimators )
-        self.numSampleFactors_      = len( sampleFactors )
-        self.numMonteCarloFactors_  = len( monteCarloFactors )
-        self.numFactors_            = len( self.factors_ )
-        self.numColumns_            = len( self.columns_ )
-
-    def _runTreatment( self, **kwargs ):
-        """
-        run Monte Carlo scenarios for the given replicate
-        """
-
-        # treatment number
-        n1 = self.sampleRowIdx_ + 1
-
-        fun.printHeader(*[
-            "",
-            f"treatment:\t{n1} / {self.sample_.shape[0]}",
-        ], verbose = True )
-
-        while self.replicateCounter_ < self.numReplicates_:
-            # replicate number
-            n2 = self.replicateCounter_ + 1
-            print( f"replicate:\t{n2} / {self.numReplicates_}" )
-            # run monte carlo scenario
-            self._runMonteCarloScenario( **kwargs )
-            # increment replicate counter
-            self.replicateCounter_ += 1
-            # save sim state
-            self.saveState( **kwargs )
-
-        # reset the replicate counter for next treatment
-        self.replicateCounter_ = 0
+        # make a column name collection
+        self.colNames = {
+            'all'           : constant + control + estimators + mc + random + sim,
+            'constant'      : constant
+            'control'       : control,
+            'estimators'    : estimators,
+            'monteCarlo'    : mc,
+            'random'        : random,
+            'sample'        : mc + control + estimators,
+            'sim'           : sim,
+        }
 
     #===========================================================================#
     # semi-protected                                                            #
     # any methods defined here need to be implemnted in the child class         #
     #===========================================================================#
 
-    def _generateEmptyData( self ):
-        """
-        use:
-        The child class needs to define this class for itself. However, it
-        shall add an empty pd.DataFrame, accessed by self.data_. the DataFrame
-        will hold all the generated data from all the random walks from all the
-        initial states defined in the generated sample ( found in self.sample_ )
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-
-        NotImplemented
-
-    def _runMonteCarloScenario( self, *args, **kwargs ):
-        """
-        do everything required to run an individual monte carlo scenario for
-        a specific treatement
-        """
+    def _getSample( self, *args, **kwargs ):
         NotImplemented
 
     #===========================================================================#
@@ -363,55 +242,3 @@ class BaseClass:
     # child class can only access theese methods, in whole or in part, by using #
     # super()                                                                   #
     #===========================================================================#
-
-    # depricated, use for new method decoding sample to use for sim
-    # def __generateLatinHCsample( self, *args, **kwargs ):
-    #     """
-    #     generate latin hyper-cube as pd.DataFrame and save it as sample_
-    #     """
-    #
-    #     nTreatments = kwargs['nTreatments'] if 'nTreatments' in kwargs else len( self.sampleFactors_ )
-    #
-    #     # construct basic latin hypercube using pyDOE
-    #     lhs = pyDOE.lhs(
-    #         nTreatments, # the number of treatments
-    #         criterion = "corr" # minimize the maximum correlation coefficient
-    #     )
-    #
-    #     # organize columns into a lookup-dictionary
-    #     columns = { col : idx for ( idx , col ) in enumerate( self.sampleFactors_ ) }
-    #
-    #     # create dictionary to collect results
-    #     results = {}
-    #
-    #     # go through each column in the sample factors and ajust it to reflect
-    #     # sim values
-    #     for colName, colIdx in columns.items():
-    #
-    #         # for all columns except radius, have the new value be old value
-    #         # scaled and shifted to reflect the range between the min & max of
-    #         # the desired values
-    #         if 'mass' in colName:
-    #             lhs[ : , colIdx ] *= ( massParams[1] - massParams[0] )
-    #             lhs[ : , colIdx ] += massParams[0]
-    #         elif 'theta' in colName.lower():
-    #             lhs[ : , colIdx ] *= ( thetaParams[1] - thetaParams[0] )
-    #             lhs[ : , colIdx ] += thetaParams[0]
-    #         elif 'phi' in colName.lower():
-    #             lhs[ : , colIdx ] *= ( phiParams[1] - phiParams[0] )
-    #             lhs[ : , colIdx ] += phiParams[0]
-    #         # for all the radius columns, convert to exponential pdf
-    #         elif 'radius' in colName:
-    #             # lhs[ : , colIdx ] *= ( np.log( radiusParams[1] ) - np.log( radiusParams[0] ))
-    #             # lhs[ : , colIdx ] + np.log( radiusParams[0] )
-    #             # lhs[ : , colIdx ] = np.exp( lhs[ : , colIdx ] )
-    #             lhs[ : , colIdx ] *= ( radiusParams[1] - radiusParams[0] )
-    #             lhs[ : , colIdx ] += radiusParams[0]
-    #         # add the column to results
-    #         results[ colName ] = lhs[ : , colIdx ]
-    #
-    #     # convert lhs to pd.DataFrame
-    #     df = pd.DataFrame( results )
-    #
-    #     # add sample
-    #     self.sample_ = df

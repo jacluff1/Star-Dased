@@ -4,9 +4,9 @@
 #===============================================================================#
 
 from BaseClass import BaseClass
-from Input import radiusParams, thetaParams, phiParams
 
 import Functions as fun
+import Input as inp
 
 #===============================================================================#
 # import external dependencies                                                  #
@@ -33,17 +33,17 @@ class MLbase( BaseClass ):
         params defined in Input.py. If the sim has not been previously run, will
         create an empty DataFrame to hold all the sim data.
 
-        ============================================================================
+        ========================================================================
         input:          type:           description:
-        ============================================================================
+        ========================================================================
         args:           type:           description:
 
         kwargs:         type:           description:
         verbose         bool            flag to print, default = False
 
-        ============================================================================
+        ========================================================================
         output:         type:
-        ============================================================================
+        ========================================================================
         None            None
         """
 
@@ -63,6 +63,9 @@ class MLbase( BaseClass ):
     # required for BaseClass, implemented here                                  #
     #===========================================================================#
 
+    def run( self, *args, **kwargs ):
+        NotImplemented
+
     #===========================================================================#
     # semi-protected methods                                                    #
     #===========================================================================#
@@ -72,42 +75,10 @@ class MLbase( BaseClass ):
     # required for BaseClass, implemented here                                  #
     #===========================================================================#
 
-    def _generateEmptyData( self, **kwargs ):
-        """
-        use:
-        Method shall add an empty pd.DataFrame, accessed by self.data_. the
-        DataFrame will hold all the generated data from all the random walks
-        from all the initial states defined in the generated sample ( found in
-        self.sample_ )
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-        # self.data_ = pd.DataFrame( columns=self.columns_ )
-        NotImplemented
-
-    def _runMonteCarloScenario( self, **kwargs ):
+    def _getSample( self, *args, **kwargs ):
         NotImplemented
 
     #===========================================================================#
     # semi-private                                                              #
     # sampling                                                                  #
     #===========================================================================#
-
-#===============================================================================#
-# main                                                                          #
-#===============================================================================#
-
-if __name__ == "__main__":
-    sim = Simulation()
-    sim.run()
