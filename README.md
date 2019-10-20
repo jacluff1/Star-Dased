@@ -1,7 +1,7 @@
 Star-Dased
 ==========
 
-A quest for a stable solution to the 3-body star system problem
+A quest for a stable solution to the 3-body star system problem using Design of Experiment (DOE)
 
 motivation
 ----------
@@ -48,7 +48,7 @@ python3 pyFiles/Simulation.py
 python3 pyFiles/MetaModels/<desired model>.py
 ```
 OR
-run simulation and any meta models in runit.sh
+run: simulation, any meta models, and generate any plots in runit.sh
 ```bash
 ./runit.sh
 ```
