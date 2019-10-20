@@ -255,8 +255,10 @@ class Simulation( BaseClass ):
     # required for BaseClass, implemented here                                  #
     #===========================================================================#
 
-    def _getSample( self ):
-        NotImplemented
+    def _getSample( self, *args ):
+        data=pd.read_csv(args[0])
+        data.rename(columns={'Tmt#':'treatmentN','MC#':'monteCarloN','R_1':'pos_(1,0,0)','R_2':'pos_(2,0,0)','R_3':'pos_(3,0,0)','\Theta_3':'pos_(3,1,0)','m_1':'mass_(0)','m_2':'mass_(1)','m_3':'mass_(2)','v_3':'vel_(3,1,0)','Escape (0.5)':'eject','Collide (0.5)':'collide'}, inplace=True)
+        return data
 
     #===========================================================================#
     # semi-private                                                              #
