@@ -13,21 +13,11 @@ if [ ! -d "$home/StarDasedVenv" ]; then
     python3 -m venv StarDasedVenv
 fi
 
-# sourrce the virtual environment
-venvSource="$home/StarDasedVenv/bin/activate"
-printf "activating vertial environment in $venvSource;\ntype 'deactivate' to leave virtual environment\n"
-source ${venvSource}
-
-# upgrade pip
-pip install --upgrade pip
+# activate virtual environment
+source activateEnv.sh
 
 # install/upgrade packages
 pip install -U -r requirements.txt
-# declare -a packages="pip ipython numpy pandas scipy matplotlib sklearn"
-# for i in ${packages[@]}; do
-#     printf "\ninstalling/upgrading $i\n"
-#     pip install -U $i
-# done
 
 # give permisions to run runit.sh
 chmod 755 runit.sh
