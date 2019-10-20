@@ -59,6 +59,21 @@ def findIdx( value, array ):
     idx = np.abs( array - value ).argmin()
     return idx
 
+def stellarColorLookup( m_i1 ):
+
+    # load stellar data to pd.DataFrame
+    table = pd.read_csv( "data/starClass.txt" )
+
+    # construct empty colors
+    c_i1 = np.empty( (3,1) )
+
+    for massIdx, mass in enumerate( m_i1 ):
+        # find rowIdx that matches closest with mass
+        rowIdx = findIdx( mass.item(), table.mass.values )
+        c_i1[ massIdx, 0 ] = table.loc[ rowIdx, 'color' ]
+
+    return c_i1
+
 def stellarRadiiLookup( m_i1 ):
 
     # load stellar data to pd.DataFrame
@@ -150,6 +165,42 @@ def xyz2spc( x_i3, **kwargs ):
 # file handling                                                                 #
 #===============================================================================#
 
+def fromPickle( fromFile, **kwargs ):
+    """
+    use:
+    loads object (preferably from dictionary) from file name provided. if not
+    file found, returns empty dictionary.
+    https://pythonprogramming.net/python-pickle-module-save-objects-serialization/
+
+    ============================================================================
+    input:          type:           description:
+    ============================================================================
+    args:           type:           description:
+    fromFile        str             file name to look for pickled object
+
+    kwargs:         type:           description:
+    verbose         bool            whether to print load message.
+    default = False
+
+    ============================================================================
+    output:         type:
+    ============================================================================
+    toObject        dict (or other object)
+    """
+
+    if os.path.isfile( f"data/{fromFile}.pkl" ):
+        fromFile = f"data/{fromFile}.pkl"
+    elif os.path.isfile( f"../data/{fromFile}.pkl" ):
+        fromFile = f"../data/{fromFile}.pkl"
+    else:
+        return {}
+
+        toObject = pickle.load(
+        open( fromFile, 'rb' ) # read the byte file
+        )
+
+        return toObject
+
 def toPickle( toFile, fromObject, **kwargs ):
     """
     use:
@@ -186,42 +237,6 @@ def toPickle( toFile, fromObject, **kwargs ):
     )
 
     printHeader( f"\n\tsaved pickle to {toFile}", **kwargs )
-
-def fromPickle( fromFile, **kwargs ):
-    """
-    use:
-    loads object (preferably from dictionary) from file name provided. if not
-    file found, returns empty dictionary.
-    https://pythonprogramming.net/python-pickle-module-save-objects-serialization/
-
-    ============================================================================
-    input:          type:           description:
-    ============================================================================
-    args:           type:           description:
-    fromFile        str             file name to look for pickled object
-
-    kwargs:         type:           description:
-    verbose         bool            whether to print load message.
-                                    default = False
-
-    ============================================================================
-    output:         type:
-    ============================================================================
-    toObject        dict (or other object)
-    """
-
-    if os.path.isfile( f"data/{fromFile}.pkl" ):
-        fromFile = f"data/{fromFile}.pkl"
-    elif os.path.isfile( f"../data/{fromFile}.pkl" ):
-        fromFile = f"../data/{fromFile}.pkl"
-    else:
-        return {}
-
-    toObject = pickle.load(
-        open( fromFile, 'rb' ) # read the byte file
-    )
-
-    return toObject
 
 def saveFigure( toFile, fig, **kwargs ):
     """
@@ -410,7 +425,7 @@ def printBreak( **kwargs ):
 
     if verbose: print("\n\
         ========================================================================\
-    ")
+    \n")
 
 def printDict( dictionary, **kwargs ):
     """
@@ -441,7 +456,7 @@ def printDict( dictionary, **kwargs ):
     if verbose:
 
         # package dictionary
-        lines = [ "", f"{message}", "key:\tvalue", "=============" ]
+        lines = [ f"{message}", "key:\tvalue", "=============" ]
         for key,value in dictionary.items():
             try:
                 lines.append( f"{key}:\t{value:0.2f}" )
@@ -510,7 +525,7 @@ def printList( list1, **kwargs ):
     if verbose:
 
         # package dictionary
-        lines =  [ "", f"{message}", "=============" ]
+        lines =  [ f"{message}", "=============" ]
         lines += list1
         printHeader( *lines, **kwargs )
 
