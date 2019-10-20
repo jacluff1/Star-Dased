@@ -263,11 +263,11 @@ class Simulation( BaseClass ):
     #===========================================================================#
 
     def __ColumnAssertion( self, colName ):
-        raise AssertionError, f"can't seem to find {colName}! You \
+        raise AssertionError(f"can't seem to find {colName}! You \
         have to either include it in constant factors, control\
         factors, or random factors. If you want to include\
         any random factors, other than initial speed, you'll have to implement\
-        it!"
+        it!")
 
 #===============================================================================#
 # main                                                                          #
