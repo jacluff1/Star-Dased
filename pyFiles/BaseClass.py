@@ -234,9 +234,6 @@ class BaseClass:
     # any methods defined here need to be implemnted in the child class         #
     #===========================================================================#
 
-    def _getSample( self, *args, **kwargs ):
-        NotImplemented
-
     #===========================================================================#
     # semi-private methods                                                      #
     # child class can only access theese methods, in whole or in part, by using #
