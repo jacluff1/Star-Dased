@@ -21,12 +21,12 @@ import numpy as np
 def staticPositionPlot( sampleRowIdx=0, timeIdx=0, **kwargs ):
 
     # set variables with key words
-    alpha = kwargs.pop('alpha') if 'alpha' in kwargs else 0.8
-    figsize = kwargs.pop('figsize') if 'figsize' in kwargs else (15,15)
-    fontsize = kwargs.pop('fontsize') if 'fontsize' in kwargs else 20
-    save = kwargs.pop('save') if 'save' in kwargs else True
-    show = kwargs.pop('show') if 'show' in kwargs else (not save)
-    toFile = kwargs.pop('toFile') if 'toFile' in kwargs else f"static3D_{sampleRowIdx}_{timeIdx}.pdf"
+    alpha = kwargs['alpha'] if 'alpha' in kwargs else 0.8
+    figsize = kwargs['figsize'] if 'figsize' in kwargs else (15,15)
+    fontsize = kwargs['fontsize'] if 'fontsize' in kwargs else 20
+    save = kwargs['save'] if 'save' in kwargs else True
+    show = kwargs['show'] if 'show' in kwargs else (not save)
+    toFile = kwargs['toFile'] if 'toFile' in kwargs else f"static3D_{sampleRowIdx}_{timeIdx}.pdf"
 
     # collect data--------------------------------------------------------------#
 
@@ -87,4 +87,6 @@ def staticPositionPlot( sampleRowIdx=0, timeIdx=0, **kwargs ):
 # example animation of scenario                                                 #
 #===============================================================================#
 
-https://matplotlib.org/3.1.1/api/animation_api.html
+def animation( sampleRowIdx=0, timeIdx=0, **kwargs ):
+    """https://matplotlib.org/3.1.1/api/animation_api.html"""
+    NotImplemented
