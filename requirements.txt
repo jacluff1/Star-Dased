@@ -5,5 +5,3 @@ pandas
 scipy
 matplotlib
 sklearn
-
-

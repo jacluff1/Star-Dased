@@ -6,5 +6,4 @@ StarDasedVenv/
 temp/
 
 # ignore file types
-**.csv
 **.pyc

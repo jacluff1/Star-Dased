@@ -3,10 +3,10 @@
 # import internal dependencies                                                  #
 #===============================================================================#
 
-from BaseClass import BaseClass
+from pyFiles.BaseClass import BaseClass
 
-import Functions as fun
-import Input as inp
+import pyFiles.Functions as fun
+import pyFiles.Input as inp
 
 #===============================================================================#
 # import external dependencies                                                  #
