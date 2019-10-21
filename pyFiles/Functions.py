@@ -21,7 +21,7 @@ def generic():
 # import internal dependencies                                                  #
 #===============================================================================#
 
-import Input
+import Input as inp
 
 #===============================================================================#
 # import external dependencies                                                  #
@@ -65,7 +65,7 @@ def stellarColorLookup( m_i1 ):
     table = pd.read_csv( "data/starClass.txt" )
 
     # construct empty colors
-    c_i1 = np.empty( (3,1) )
+    c_i1 = np.empty( (3,1), dtype='U8')
 
     for massIdx, mass in enumerate( m_i1 ):
         # find rowIdx that matches closest with mass
@@ -83,7 +83,7 @@ def stellarRadiiLookup( m_i1 ):
     # numerical order.
     mass   = table.mass.values[::-1] # solar mass
     radii  = table.radius.values[::-1] # solar radii
-    radii *= Input.sr2ly # ly
+    radii *= inp.sr2ly # ly
 
     # generate a range of masses
     mass1 = np.linspace(
@@ -192,14 +192,16 @@ def fromPickle( fromFile, **kwargs ):
         fromFile = f"data/{fromFile}.pkl"
     elif os.path.isfile( f"../data/{fromFile}.pkl" ):
         fromFile = f"../data/{fromFile}.pkl"
+    elif os.path.isfile( fromFile ):
+        fromFile = fromFile
     else:
         return {}
 
-        toObject = pickle.load(
-        open( fromFile, 'rb' ) # read the byte file
-        )
+    toObject = pickle.load(
+    open( fromFile, 'rb' ) # read the byte file
+    )
 
-        return toObject
+    return toObject
 
 def toPickle( toFile, fromObject, **kwargs ):
     """
@@ -225,18 +227,21 @@ def toPickle( toFile, fromObject, **kwargs ):
     ============================================================================
     None            None
     """
-
-    if os.path.isdir( "data" ):
-        toFile = f"data/{toFile}.pkl"
-    elif os.path.isdir( "../data" ):
-        toFile = f"../data/{toFile}.pkl"
+    # toFile
+    #
+    # if os.path.isdir( "data" ):
+    #     toFile = f"data/{toFile}.pkl"
+    # elif os.path.isdir( "../data" ):
+    #     toFile = f"../data/{toFile}.pkl"
+    # else:
+    #     pdb.set_trace()
 
     pickle.dump(
         fromObject,             # object to write
         open( toFile, "wb" )    # open file and write object to it in bytes
     )
 
-    printHeader( f"\n\tsaved pickle to {toFile}", **kwargs )
+    printHeader( f"saved pickle to {toFile}", **kwargs )
 
 def saveFigure( toFile, fig, **kwargs ):
     """
@@ -261,7 +266,7 @@ def saveFigure( toFile, fig, **kwargs ):
     toFile = f"../figures/{toFile}.pdf"
     fig.savefig( toFile )
     plt.close( fig )
-    printHeader( f"\n\tsaved figure: {toFile}", **kwargs )
+    printHeader( f"saved figure: {toFile}", **kwargs )
 
 #===============================================================================#
 # math & physics                                                                #
@@ -310,7 +315,7 @@ def nBodyAcceleration( x_i3, m_i1 ):
 
     # find piece-wise force of gravity
     f_ij3  = hat_ij3 * inp.G * m_ij[:,:,None] / x_ij[:,:,None]**2 # (solar mass) (km/s)^2 (ly)^-1
-    f_ij3 *= Input.km2ly # (solar mass) (km/s^2)
+    f_ij3 *= inp.km2ly # (solar mass) (km/s^2)
 
     # sum up forces along ( 1 - from body ) to get forces on bodies
     f_i3 = f_ij3.sum( axis=1 ) # (solar mass) (km/s^2)
@@ -344,19 +349,19 @@ def nBodyRungeKutta4( time, dt, x_i3, xdot_i3, m_i1 ):
 
     # find coefficients for RK4
     kr1  = xdot_i3 # km/s
-    kr1 *= Input.km2ly # ly/s
+    kr1 *= inp.km2ly # ly/s
     kv1  = nBodyAcceleration( x_i3, m_i1 ) # km/s^2
 
     kr2  = xdot_i3 * kv1 * dt/2 # km/s
-    kr2 *= Input.km2ly # ly/s
+    kr2 *= inp.km2ly # ly/s
     kv2  = nBodyAcceleration( x_i3 + kr1 * dt/2, m_i1 ) # km/s^2
 
     kr3  = xdot_i3 * kv2 * dt/2 # km/s
-    kr3 *= Input.km2ly # ly/s
+    kr3 *= inp.km2ly # ly/s
     kv3  = nBodyAcceleration( x_i3 + kr2 * dt/2, m_i1 ) # km/s^2
 
     kr4  = xdot_i3 * kv3 * dt # km/s
-    kr4 *= Input.km2ly # ly/s
+    kr4 *= inp.km2ly # ly/s
     kv4  = nBodyAcceleration( x_i3 + kr3 * dt/2, m_i1 ) # km/s^2
 
     # update positions and velocities
@@ -389,7 +394,7 @@ def timeStep( x_i3, xdot_i3, **kwargs ):
         dx_i1 = np.sqrt( ( x_i3**2 ).sum( axis=1, keepdims=True ) ) * scale # ly
 
     # convert dx_i1 from ly --> km
-    dx_i1 /= Input.km2ly # km
+    dx_i1 /= inp.km2ly # km
 
     # find the speeds
     xdot_i1 = np.sqrt( ( xdot_i3**2 ).sum( axis=1, keepdims=True ) ) # km/s
@@ -545,7 +550,7 @@ def randomSpeed( maxSpeed_i1 ):
         speedArgs = (
             inp.randomFactorParams[0], # min speed (km/s)
             maxSpeed.item(), # max speed (km/s)
-            inp.randomFactorParams[2], # number of allowed values (int)
+            inp.randomFactorParams[1], # number of allowed values (int)
         )
 
         # construct allowable speed value
@@ -586,6 +591,5 @@ def checkEjection( x_i3, xdot_i3, m_i1 ):
     speed_i1 = np.sqrt( ( xdot_i3**2 ).sum( axis=1, keepdims=True ) ) # km/s
 
     # determine any eminent ejections
-    ejections = ( speed > maxSpeed ) # km/s
-    pdb.set_trace()
+    ejections = ( speed_i1 > vEscape_i1 ) # km/s
     return np.any( ejections ) # bool

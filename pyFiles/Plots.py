@@ -9,6 +9,7 @@ import Functions as fun
 # import external dependencies                                                  #
 #===============================================================================#
 
+import argparse
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
@@ -26,7 +27,7 @@ def staticPositionPlot( sampleRowIdx=0, timeIdx=0, **kwargs ):
     fontsize = kwargs['fontsize'] if 'fontsize' in kwargs else 20
     save = kwargs['save'] if 'save' in kwargs else True
     show = kwargs['show'] if 'show' in kwargs else (not save)
-    toFile = kwargs['toFile'] if 'toFile' in kwargs else f"static3D_{sampleRowIdx}_{timeIdx}.pdf"
+    toFile = kwargs['toFile'] if 'toFile' in kwargs else f"static3D_{sampleRowIdx}_{timeIdx}"
 
     # collect data--------------------------------------------------------------#
 
@@ -41,8 +42,8 @@ def staticPositionPlot( sampleRowIdx=0, timeIdx=0, **kwargs ):
 
     # construct SPC positions
     spc_i3 = np.zeros( (3,3) )
-    for starIdx in [ 1, 2, 3 ]:
-        for coordinateIdx in [ 0, 1, 2 ]:
+    for starIdx in range(3):
+        for coordinateIdx in range(3):
             colName = f"pos_({starIdx},{coordinateIdx},{timeIdx})"
             spc_i3[ starIdx, coordinateIdx ] = scenario[ colName ]
 
@@ -51,7 +52,7 @@ def staticPositionPlot( sampleRowIdx=0, timeIdx=0, **kwargs ):
 
     # construct mass
     m_i3 = np.zeros( (3,1) )
-    for starIdx in [ 1, 2, 3 ]::
+    for starIdx in range(3):
         colName = f"mass_({starIdx})"
         m_i3[ starIdx ] = scenario[ colName ]
 
@@ -80,7 +81,7 @@ def staticPositionPlot( sampleRowIdx=0, timeIdx=0, **kwargs ):
     # save/close----------------------------------------------------------------#
 
     if show: plt.show()
-    if save: fig.savefig( toFile )
+    if save: fun.saveFigure( toFile )
     plt.close( fig )
 
 #===============================================================================#
@@ -90,3 +91,28 @@ def staticPositionPlot( sampleRowIdx=0, timeIdx=0, **kwargs ):
 def animation( sampleRowIdx=0, timeIdx=0, **kwargs ):
     """https://matplotlib.org/3.1.1/api/animation_api.html"""
     NotImplemented
+
+
+#===============================================================================#
+# main                                                                          #
+#===============================================================================#
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--sampleRowIdx')
+    parser.add_argument('--timeIdx')
+    args = parser.parse_args()
+
+    # set default key words
+    kwargs = {
+        'sampleRowIdx'  : 0,
+        'timeIdx'       : 0,
+    }
+
+    # update key word arguments if presented
+    if args.sampleRowIdx != None: kwargs['sampleRowIdx'] = int( args.sampleRowIdx )
+    if args.timeIdx != None: kwargs['timeIdx'] = int( args.sample )
+
+    staticPositionPlot( **kwargs )
+    animation( **kwargs )

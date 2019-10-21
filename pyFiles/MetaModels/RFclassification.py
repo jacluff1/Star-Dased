@@ -4,7 +4,7 @@
 #===============================================================================#
 
 from pyFiles.BaseClass import BaseClass
-from MLbase import MLbase
+from pyFiles.MetaModels.MLbase import MLbase
 
 #===============================================================================#
 # import external dependencies                                                  #
