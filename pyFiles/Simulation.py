@@ -56,12 +56,8 @@ class Simulation( BaseClass ):
         # run BaseClass constructor for Simulation instance
         super().__init__( "Simulation", *args, **kwargs )
 
-        # only add the number of replicates if it doesn't already exist
-        if not hasattr( self, 'numReplicates_' ):
-            self.numReplicates_ = numReplicates
-
-        # only add Monte Carlo replicate counter if it doesn't exist
-        if not hasattr( self, 'replicateCounter_' ): self.replicateCounter_ = 0
+        # only add sample DF if it doesn't already exist
+        if not hasattr( self, 'sample_' ): self._getSample()
 
         # only add sample row index it doesn't already exist
         if not hasattr( self, 'sampleRowIdx_' ): self.sampleRowIdx_ = 0
@@ -102,6 +98,8 @@ class Simulation( BaseClass ):
             # evaluate run completion conditions, if the sample row index is
             # greater than the number of rows in sample_
             self.runComplete_ = ( self.sampleRowIdx_ > self.sample_.shape[ 0 ] )
+            # save current state of sim model
+            self.saveState()
 
     #===========================================================================#
     # puplic methods                                                            #
@@ -114,44 +112,126 @@ class Simulation( BaseClass ):
 
     def _runScenario( self, **kwargs ):
 
-        # set up---------------------------------------------------------------#
+        # set terminition conditions
+        collision = False
+        ejection  = False
+        timeLimit = False
+
+        valuesDict = self.__setupScenario( self.sampleRowIdx_ )
+        while not all([ collision, ejection, timeLimit ]):
+            valuesDict  = self.__runScenario( valuesDict )
+            collision   = valuesDict['collision']
+            ejection    = valuesDict['ejection']
+            timeLimit   = valuesDict['timeLimit']
+        self.__recordScenario( valuesDict )
+
+    #===========================================================================#
+    # semi-protected methods                                                    #
+    # required for BaseClass, implemented here                                  #
+    #===========================================================================#
+
+    def _getSample( self ):
+        data = pd.read_csv( inp.sampleFileName )
+        data.rename( columns=inp.sampleFileColumnMap, inplace=True )
+        data.drop( columns=inp.sampleFileDropColumns, inplace=True )
+        self.sample_ = data
+
+    #===========================================================================#
+    # semi-private                                                              #
+    #===========================================================================#
+
+    def __columnAssertion( self, colName ):
+        raise AssertionError(f"can't seem to find {colName}! You \
+        have to either include it in constant factors, control\
+        factors, or random factors. If you want to include\
+        any random factors, other than initial speed, you'll have to implement\
+        it!")
+
+    def __recordScenario( self, valuesDict ):
+        vd = valuesDict
+
+        # collect results for ALL columns
+        results = {
+            'runTime'   : vd['time'],
+            'collide'   : int( vd['collision'] ),
+            'eject'     : int( vd['ejection'] ),
+            'survive'   : int( vd['timeLimit'] ),
+            'nSteps'    : vd['steps'],
+        }
+        # add all final posigion and velocities
+        for starIdx in range(3):
+            for coordinateIdx in range(3):
+                for name, array in zip(
+                    [ 'pos'         , 'vel'             ],
+                    [ vd['spc_i3_t'], vd['spcdot_i3_t'] ]
+                ):
+                    colName = f"{name}_({starIdx},{coordinateIdx},-1)"
+                    results[ colName ] = array[ starIdx, coordinateIdx ]
+
+        for colName, value in results.items():
+            self.sample_.loc[ self.sampleRowIdx_, colName ] = value
+
+    def __runScenario( self, valuesDict ):
+        vd = valuesDict
+
+        # update time, time step, positions, and velocities
+        vd['time'], vd['dt'], vd['x_i3_t'], vd['xdot_i3_t'] = fun.nBodyRungeKutta4( vd['time'], vd['dt'], vd['x_i3_t'], vd['xdot_i3_t'], vd['m_i1'] )
+
+        # see if any stars collided
+        vd['collision'] = fun.checkCollision( vd['x_i3_t'], vd['r_i1'] )
+
+        # see if any stars are moving to fast
+        vd['ejection'] = fun.checkEjection( vd['x_i3_t'], vd['xdot_i3_t'], vd['m_i1'] )
+
+        # see if timit limit has been exceeded
+        vd['timeLimit'] = ( vd['time'] >= inp.maxT )
+
+        # increment step counter
+        vd['steps'] += 1
+
+        # convert ending values back to SPC
+        vd['spc_i3_t']    = fun.xyz2spc( vd['x_i3_t'] )
+        vd['spcdot_i3_t'] = fun.xyz2spc( vd['xdot_i3_t'] )
+
+        # return the updated values dictionary
+        return vd
+
+    def __setupScenario( self, sampleRowIdx ):
 
         # scenario number
         n1 = self.sampleRowIdx_ + 1
 
-        fun.printHeader(*[
-            "",
-            f"scenario:\t{n1} / {self.sample_.shape[0]}",
-        ], verbose = True )
+        fun.printHeader( f"scenario:\t{n1} / {self.sample_.shape[0]}", verbose = True )
 
         # use the sampleRowIdx to get treatement values
         sampleRow = self.sample_.iloc[ self.sampleRowIdx_ ]
 
         # construct SPC positions
         spc_i3 = np.zeros( (3,3) )
-        for starIdx in [ 1, 2, 3 ]:
-            for coordinateIdx in [ 0, 1, 2 ]:
+        for starIdx in range(3):
+            for coordinateIdx in range(3):
                 colName = f"pos_({starIdx},{coordinateIdx},0)"
                 if colName in inp.constantFactors:
-                    spc_i3[ starIdx, coordinateIdx ] = constantFactors[ colName ]
+                    spc_i3[ starIdx, coordinateIdx ] = inp.constantFactors[ colName ]
                 elif colName in sampleRow:
                     spc_i3[ starIdx, coordinateIdx ] = sampleRow[ colName ]
                 else:
-                    self.__ColumnAssertion( colName )
+                    pdb.set_trace()
+                    self.__columnAssertion( colName )
 
         # construct masses
         m_i1 = np.zeros( (3,1) )
-        for starIdx in [ 1, 2, 3 ]:
+        for starIdx in range(3):
             colName = f"mass_({starIdx})"
             if colName in inp.constantFactors:
-                m_i1[ starIdx, 0 ] = constantFactors[ colName ]
+                m_i1[ starIdx, 0 ] = inp.constantFactors[ colName ]
             elif colName in sampleRow:
                 m_i1[ starIdx, 0 ] = sampleRow[ colName ]
             else:
-                self.__ColumnAssertion( colName )
+                self.__columnAssertion( colName )
 
         # calculate XYZ positions
-        x_i3 = fun.spc2xyz( spc_i3, **kwargs )
+        x_i3 = fun.spc2xyz( spc_i3 )
 
         # calculate CM of the new system ( vector from current origin to CM )
         CM_13 = fun.findCM( x_i3, m_i1 )
@@ -167,7 +247,7 @@ class Simulation( BaseClass ):
         # assign random speed
         spcdot_i3[ : , 0 ] = fun.randomSpeed( escapeSpeed_i1 )[:,0]
         # assign angles
-        for starIdx in [ 1, 2, 3 ]:
+        for starIdx in range(3):
             for coordinateIdx in [ 1, 2 ]:
                 colName = f"vel_({starIdx},{coordinateIdx},0)"
                 if colName in inp.constantFactors:
@@ -175,7 +255,7 @@ class Simulation( BaseClass ):
                 elif colName in sampleRow:
                     spcdot_i3[ starIdx, coordinateIdx ] = sampleRow[ colName ]
                 else:
-                    self.__ColumnAssertion( colName )
+                    self.__columnAssertion( colName )
 
         # calculate XYZ velocities
         xdot_i3 = fun.spc2xyz( spcdot_i3 )
@@ -186,97 +266,22 @@ class Simulation( BaseClass ):
         # set starting run time and step counter
         steps, time = 0, 0
 
-        # set terminition conditions
-        collision = False
-        ejection = False
-        timeLimit = False
-
         # initialize time and positions to be updated
         x_i3_t    = deepcopy( x_i3 )
         xdot_i3_t = deepcopy( xdot_i3 )
 
         # initialize time step using smallest quotent of distance & initial
         # speed
-        dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=inp.dt0ScaleFactor )
+        # dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=inp.dt0ScaleFactor )
+        dt = 60 * 60
 
-        # run scenario simulation----------------------------------------------#
-
-        # run through simulation until any terminition conditions are met
-        while not all([ collision, ejection, timeLimit ]):
-            pdb.set_trace()
-            # update time, time step, positions, and velocities
-            time, dt, x_i3_t, xdot_i3_t = fun.nBodyRungeKutta4( time, dt, x_i3_t, xdot_i3_t, m_i1 )
-
-            # see if any stars collided
-            collision = fun.checkCollision( x_i3_t, r_i1 )
-
-            # see if any stars are moving to fast
-            ejection = fun.checkEjection( x_i3_t, xdot_i3_t, m_i1 )
-
-            # see if timit limit has been exceeded
-            timeLimit = ( time >= inp.maxT )
-
-            # increment step counter
-            steps += 1
-
-            # convert ending values back to SPC
-            spc_i3_t    = fun.xyz2spc( x_i3_t )
-            spcdot_i3_t = fun.xyz2spc( xdot_i3_t )
-
-        # collect results------------------------------------------------------#
-
-        # collect results for ALL columns
-        results = {
-            'runTime'   : time,
-            'collide'   : int( collision ),
-            'eject'     : int( ejection ),
-            'survive'   : int( timeLimit ),
-            'nSteps'    : steps,
-        }
-        # add all final posigion and velocities
-        for starIdx in [ 1, 2, 3 ]:
-            for coordinateIdx in [ 0, 1, 2 ]:
-                for name, array in zip(
-                    [ 'pos'   , 'vel'      ],
-                    [ spc_i3_t, spcdot_i3_t]
-                ):
-                    colName = f"{name}_({starIdx},{coordinateIdx},-1)"
-                    results[ colName ] = array[ starIdx, coordinateIdx ]
-
-        # update sample DataFrame----------------------------------------------#
-
-        for colName, value in results.items():
-            self.sample_.loc[ self.sampleRowIdx_, colName ] = value
-
-        # end------------------------------------------------------------------#
-
-    #===========================================================================#
-    # semi-protected methods                                                    #
-    # required for BaseClass, implemented here                                  #
-    #===========================================================================#
-
-    def _getSample( self, *args ):
-        data=pd.read_csv(args[0])
-        data.rename(columns={'Tmt#':'treatmentN','MC#':'monteCarloN','R_1':'pos_(1,0,0)','R_2':'pos_(2,0,0)','R_3':'pos_(3,0,0)','\Theta_3':'pos_(3,1,0)','m_1':'mass_(0)','m_2':'mass_(1)','m_3':'mass_(2)','v_3':'vel_(3,1,0)','Escape (0.5)':'eject','Collide (0.5)':'collide'}, inplace=True)
-        return data
-
-    #===========================================================================#
-    # semi-private                                                              #
-    #===========================================================================#
-
-    def __ColumnAssertion( self, colName ):
-        raise AssertionError(f"can't seem to find {colName}! You \
-        have to either include it in constant factors, control\
-        factors, or random factors. If you want to include\
-        any random factors, other than initial speed, you'll have to implement\
-        it!")
+        # return all the locally defined variables as dictionary
+        return locals()
 
 #===============================================================================#
 # main                                                                          #
 #===============================================================================#
 
 if __name__ == "__main__":
-    sim = Simulation(
-        nTreatments = 100
-    )
+    sim = Simulation()
     sim.run()

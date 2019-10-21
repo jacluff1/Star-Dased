@@ -42,8 +42,8 @@ def staticPositionPlot( sampleRowIdx=0, timeIdx=0, **kwargs ):
 
     # construct SPC positions
     spc_i3 = np.zeros( (3,3) )
-    for starIdx in [ 1, 2, 3 ]:
-        for coordinateIdx in [ 0, 1, 2 ]:
+    for starIdx in range(3):
+        for coordinateIdx in range(3):
             colName = f"pos_({starIdx},{coordinateIdx},{timeIdx})"
             spc_i3[ starIdx, coordinateIdx ] = scenario[ colName ]
 
@@ -52,7 +52,7 @@ def staticPositionPlot( sampleRowIdx=0, timeIdx=0, **kwargs ):
 
     # construct mass
     m_i3 = np.zeros( (3,1) )
-    for starIdx in [ 1, 2, 3 ]:
+    for starIdx in range(3):
         colName = f"mass_({starIdx})"
         m_i3[ starIdx ] = scenario[ colName ]
 

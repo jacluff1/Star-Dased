@@ -14,6 +14,7 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 import pdb
+import os
 
 #===============================================================================#
 # BaseClass definition                                                          #
@@ -100,7 +101,8 @@ class BaseClass:
         ========================================================================
         None            None
         """
-        state = fun.fromPickle( self.name_, **kwargs )
+        state = fun.fromPickle( f"data/{self.name_}.pkl", **kwargs )
+        pdb.set_trace()
         self._dict2attributes( state, message='Loading State:', **kwargs )
 
     def saveState( self , **kwargs ):
@@ -211,7 +213,7 @@ class BaseClass:
         # create an empty list to hold misc sim values and final values
         sim = [ 'nSteps' ]
         # fill in the columns for final sim values
-        for starIdx in [ 1, 2, 3 ]:
+        for starIdx in range(3):
             for coordinateIdx in range(3):
                 for name in [ 'pos', 'vel' ]:
                     colName = f"{name}_({starIdx},{coordinateIdx},-1)"

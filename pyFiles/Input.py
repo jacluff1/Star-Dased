@@ -46,37 +46,37 @@ G = 6.67408e-11 * m2km**2 * m2ly / kg2solar
 # constant factors
 # (starIdx, coordinateIdx, timeIdx)
 constantFactors = {
-    'pos_(1,1,0)' : np.pi/2,    # star 1, initial theta pos (radians)
-    'pos_(2,1,0)' : np.pi/2,    # star 2, initial theta pos (radians)
-    'pos_(1,2,0)' : 0.0,        # star 1, initial phi pos (radians)
-    'pos_(2,2,0)' : np.pi,      # star 2, initial phi pos (radians)
-    'pos_(3,2,0)' : 0.0,        # star 3, initial phi pos (radians)
-    'vel_(1,1,0)' : np.pi/2,     # star 1, initial theta vel (radians)
-    'vel_(2,1,0)' : np.pi/2,     # star 2, initial theta vel (radians)
-    'vel_(1,2,0)' : np.pi/2,     # star 1, initial phi vel (radians)
-    'vel_(2,2,0)' : (3/2)*np.pi, # star 2, initial phi vel (radians)
-    'vel_(3,2,0)' : np.pi/2,     # star 3, initial phi vel (radians)
+    'pos_(0,1,0)' : np.pi/2,    # star 1, initial theta pos (radians)
+    'pos_(1,1,0)' : np.pi/2,    # star 2, initial theta pos (radians)
+    'pos_(0,2,0)' : 0.0,        # star 1, initial phi pos (radians)
+    'pos_(1,2,0)' : np.pi,      # star 2, initial phi pos (radians)
+    'pos_(2,2,0)' : 0.0,        # star 3, initial phi pos (radians)
+    'vel_(0,1,0)' : np.pi/2,     # star 1, initial theta vel (radians)
+    'vel_(1,1,0)' : np.pi/2,     # star 2, initial theta vel (radians)
+    'vel_(0,2,0)' : np.pi/2,     # star 1, initial phi vel (radians)
+    'vel_(1,2,0)' : (3/2)*np.pi, # star 2, initial phi vel (radians)
+    'vel_(2,2,0)' : np.pi/2,     # star 3, initial phi vel (radians)
 }
 
 # control factors
 # (starIdx, coordinateIdx, timeIdx)
 controlFactors = {
-    'pos_(1,0,0)'   : ( 0.1, 5.0 ), # star 1 initial radial position limits (ly)
-    'pos_(2,0,0)'   : ( 0.1, 5.0 ), # star 2 initial radial position limits (ly)
-    'pos_(3,0,0)'   : ( 0.1, 5.0 ), # star 3 initial radial position limits (ly)
-    'pos_(3,1,0)'   : ( 0.0, np.pi/2 ), # star 3 initial polar pos angle limits (ly)
+    'pos_(0,0,0)'   : ( 0.1, 5.0 ), # star 1 initial radial position limits (ly)
+    'pos_(1,0,0)'   : ( 0.1, 5.0 ), # star 2 initial radial position limits (ly)
+    'pos_(2,0,0)'   : ( 0.1, 5.0 ), # star 3 initial radial position limits (ly)
+    'pos_(2,1,0)'   : ( 0.0, np.pi/2 ), # star 3 initial polar pos angle limits (ly)
     'mass_(0)'      : ( 0.08, 50 ), # star 1 mass limits (solar mass)
     'mass_(1)'      : ( 0.08, 50 ), # star 2 mass limits (solar mass)
     'mass_(2)'      : ( 0.08, 50 ), # star 3 mass limits (solar mass)
-    'vel_(3,1,0)'   : ( np.pi/2, (3/2)*np.pi ), # star 3 initial polar vel angle limits (radians)
+    'vel_(2,1,0)'   : ( np.pi/2, (3/2)*np.pi ), # star 3 initial polar vel angle limits (radians)
 }
 
 # random factors
 # (starIdx, coordinateIdx, timeIdx)
 randomFactors = [
-    'vel_(1,0,0)', # star 1 iniital speed (km/s)
-    'vel_(2,0,0)', # star 2 initial speed (km/s)
-    'vel_(3,0,0)', # star 3 initial speed (km/s)
+    'vel_(0,0,0)', # star 1 iniital speed (km/s)
+    'vel_(1,0,0)', # star 2 initial speed (km/s)
+    'vel_(2,0,0)', # star 3 initial speed (km/s)
 ]
 
 # random factor paramaters
@@ -90,3 +90,23 @@ maxT = 10 * kyr2s
 
 # initial time-step scale factor
 dt0ScaleFactor = 1e-3
+
+# sample file name
+sampleFileName = "data/CUR_3Body_in.csv"
+# sample file column map
+sampleFileColumnMap = {
+    'Tmt#'          :'treatmentN',
+    'MC#'           :'monteCarloN',
+    'R_1'           :'pos_(0,0,0)',
+    'R_2'           :'pos_(1,0,0)',
+    'R_3'           :'pos_(2,0,0)',
+    '\\theta_3'     :'pos_(2,1,0)',
+    'm_1'           :'mass_(0)',
+    'm_2'           :'mass_(1)',
+    'm_3'           :'mass_(2)',
+    'v_3'           :'vel_(2,1,0)',
+    'Escape (0.5)'  :'eject',
+    'Collide (0.5)' :'collide',
+}
+# sample file drop columns
+sampleFileDropColumns = [ 'N/A' ]
