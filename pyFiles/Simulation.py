@@ -205,12 +205,12 @@ class Simulation( BaseClass ):
     def setupScenario( self, sampleRowIdx ):
 
         # scenario number
-        n1 = self.sampleRowIdx_ + 1
+        n1 = sampleRowIdx + 1
 
         fun.printHeader( f"scenario:\t{n1} / {self.sample_.shape[0]}", verbose = True )
 
         # use the sampleRowIdx to get treatement values
-        sampleRow = self.sample_.iloc[ self.sampleRowIdx_ ]
+        sampleRow = self.sample_.iloc[ sampleRowIdx ]
 
         # construct SPC positions
         spc_i3 = np.zeros( (3,3) )
@@ -224,7 +224,7 @@ class Simulation( BaseClass ):
                 else:
                     pdb.set_trace()
                     self.__columnAssertion( colName )
-                self.sample_.loc[ self.sampleRowIdx_, colName ] = spc_i3[ starIdx, coordinateIdx ]
+                self.sample_.loc[ sampleRowIdx, colName ] = spc_i3[ starIdx, coordinateIdx ]
 
         # construct masses
         m_i1 = np.zeros( (3,1) )

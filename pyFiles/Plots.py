@@ -4,6 +4,7 @@
 #===============================================================================#
 
 import Functions as fun
+import Input as inp
 from Simulation import Simulation
 
 #===============================================================================#
@@ -17,6 +18,7 @@ from matplotlib.lines import Line2D
 import matplotlib.animation as animation
 import numpy as np
 import pdb
+import tqdm
 
 #===============================================================================#
 # static 3D plot of positions                                                   #
@@ -104,58 +106,74 @@ def scenarioAnimation( sampleRowIdx=0, timeIdx=0, **kwargs ):
     https://matplotlib.org/gallery/animation/subplots.html
     https://stackoverflow.com/a/29834816/6943976
     """
+    sim = Simulation()
 
     def data_gen():
-        t = data_gen.t
-        cnt = 0
-        while cnt < 1000:
-            cnt+=1
-            t += 0.05
-            y1 = np.sin(2*np.pi*t) * np.exp(-t/10.)
-            y2 = np.cos(2*np.pi*t) * np.exp(-t/10.)
-            # adapted the data generator to yield both sin and cos
-            yield t, y1, y2
 
-    data_gen.t = 0
+        # set terminition conditions
+        collision = False
+        ejection  = False
+        timeLimit = False
+
+        valuesDict = sim.setupScenario( sampleRowIdx )
+        dt   = valuesDict['dt']
+        maxT = inp.maxT
+        for _ in tqdm( range( 10 ) ):
+
+            valuesDict  = self.runScenario( valuesDict )
+            collision   = valuesDict['collision']
+            ejection    = valuesDict['ejection']
+            timeLimit   = valuesDict['timeLimit']
+            if any([ collision, ejection, timeLimit ]): break
+
+            runTime = valuesDict['runTime']
+            x_i3    = valuesDict['x_i3_t']
+            m_i1    = valuesDict['m_i1']
+            r_i1    = valuesDict['r_i1']
+            c_i1    = fun.stellarColorLookup( m_i1 )
+            xmax    = x_i3.max()*1.1
+            yield runTime, x_i3, m_i1, r_i1, c_i1, xmax
 
     # create a figure with two subplots
-    fig, (ax1, ax2) = plt.subplots(2,1)
+    fig,ax = plt.subplots( nrows=2, ncols=2, sharex=True, sharey=True, figsize=(15,15) )
 
-    # intialize two line objects (one in each axes)
-    line1, = ax1.plot([], [], lw=2)
-    line2, = ax2.plot([], [], lw=2, color='r')
-    line = [line1, line2]
+    # collect lines and set up axies
+    line = []
+    for x in ax.flatten()[:-1]:
+        line.append( x.scatter( [], [], c=[], s=[] ) ) # stars
+        line.append( x.vlines( 0, [], [], 'k', lw=3 ) ) # subplot x-axis
+        line.append( x.hlines( 0, [], [], 'k', lw=3 ) ) # subplot y-axis
+        x.grid()
+    for x in ax.flatten():
+        x.set_aspect( 'equal' )
+        x.set_facecolor( 'k' )
+    plt.tight_layout()
 
-    # the same axes initalizations as before (just now we do it for both of them)
-    for ax in [ax1, ax2]:
-        ax.set_ylim(-1.1, 1.1)
-        ax.set_xlim(0, 5)
-        ax.grid()
+    def run( data ):
 
-    # initialize the data arrays
-    xdata, y1data, y2data = [], [], []
-    def run(data):
         # update the data
-        t, y1, y2 = data
-        xdata.append(t)
-        y1data.append(y1)
-        y2data.append(y2)
+        runTime, x_i3, m_i1, r_i1, c_i1, xmax = data
 
         # axis limits checking. Same as before, just for both axes
-        for ax in [ax1, ax2]:
-            xmin, xmax = ax.get_xlim()
-            if t >= xmax:
-                ax.set_xlim(xmin, 2*xmax)
-                ax.figure.canvas.draw()
+        for i, x in enumerate( ax.flatten()[:-1] ):
+            x.set_xlim( -xmax, xmax )
+            x.set_ylim( -xmax, xmax )
+            x.figure.canvas.draw()
 
         # update the data of both line objects
-        line[0].set_data(xdata, y1data)
-        line[1].set_data(xdata, y2data)
+        line[0].set_data( x_i3[:,0], x_i3[:,1], c_i1[:,0], 1e9*r_i1[:,0] )
+        line[1].set_data( xmax, xmax )
+        line[2].set_data( xmax, xmax )
+        line[3].set_data( x_i3[:,0], x_i3[:,2], c_i1[:,0], 1e9*r_i1[:,0] )
+        line[4].set_data( xmax, xmax )
+        line[5].set_data( xmax, xmax )
+        line[6].set_data( x_i3[:,1], x_i3[:,2], c_i1[:,0], 1e9*r_i1[:,0] )
+        line[7].set_data( xmax, xmax )
+        line[8].set_data( xmax, xmax )
 
         return line
 
-    ani = animation.FuncAnimation(fig, run, data_gen, blit=True, interval=10,
-        repeat=False)
+    ani = animation.FuncAnimation(fig, run, data_gen, blit=True, interval=10, repeat=False)
     plt.show()
 
 #===============================================================================#
@@ -182,7 +200,4 @@ if __name__ == "__main__":
     if args.timeIdx != None: kwargs['timeIdx'] = int( args.sample )
 
     # staticPositionPlot( **kwargs )
-    # animation( **kwargs )
     ani = scenarioAnimation()
-    # ani.save('test_sub.mp4')
-    plt.show()
