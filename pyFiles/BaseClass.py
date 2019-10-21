@@ -102,7 +102,6 @@ class BaseClass:
         None            None
         """
         state = fun.fromPickle( f"data/{self.name_}.pkl", **kwargs )
-        pdb.set_trace()
         self._dict2attributes( state, message='Loading State:', **kwargs )
 
     def saveState( self , **kwargs ):
@@ -125,7 +124,7 @@ class BaseClass:
         ========================================================================
         None            None
         """
-        fun.toPickle( self.name_, self.__dict__, **kwargs )
+        fun.toPickle( f"data/{self.name_}.pkl", self.__dict__, **kwargs )
 
     #===========================================================================#
     # public methods                                                            #
@@ -220,7 +219,7 @@ class BaseClass:
                     sim.append( colName )
 
         # make a column name collection
-        self.colNames = {
+        self.colNames_ = {
             'all'           : constant + control + estimators + mc + random + sim,
             'constant'      : constant,
             'control'       : control,

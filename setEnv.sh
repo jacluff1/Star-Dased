@@ -19,5 +19,12 @@ source activateEnv.sh
 # install/upgrade packages
 pip install -U -r requirements.txt
 
+# install tkinter for interactive plots
+sudo apt-get install python3-tk
+
+# install ffmpeg ( for writing matplotlib animations )
+sudo apt install ffmpeg
+ffmpeg -version
+
 # give permisions to run runit.sh
 chmod 755 runit.sh

@@ -263,7 +263,7 @@ def saveFigure( toFile, fig, **kwargs ):
     ============================================================================
     None            None
     """
-    toFile = f"../figures/{toFile}.pdf"
+    toFile = f"figures/{toFile}.pdf"
     fig.savefig( toFile )
     plt.close( fig )
     printHeader( f"saved figure: {toFile}", **kwargs )
@@ -376,7 +376,7 @@ def nBodyRungeKutta4( time, dt, x_i3, xdot_i3, m_i1 ):
     time += dt # s
 
     # update time-step
-    dt = timeStep( x_i3, xdot_i3 ) # s
+    # dt = timeStep( x_i3, xdot_i3 ) # s
 
     # output time, time-step, positions, and velocities
     return time, dt, x_i3, xdot_i3 # s, s, ly, km/s

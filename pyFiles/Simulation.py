@@ -16,6 +16,7 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 import pdb
+from tqdm import tqdm
 
 #===============================================================================#
 # Simulation definition                                                         #
@@ -97,9 +98,10 @@ class Simulation( BaseClass ):
             self.sampleRowIdx_ += 1
             # evaluate run completion conditions, if the sample row index is
             # greater than the number of rows in sample_
-            self.runComplete_ = ( self.sampleRowIdx_ > self.sample_.shape[ 0 ] )
+            self.runComplete_ = ( self.sampleRowIdx_ == self.sample_.shape[ 0 ] )
             # save current state of sim model
             self.saveState()
+        self.sample_.to_csv( "data/Simulation.csv", index=False )
 
     #===========================================================================#
     # puplic methods                                                            #
@@ -117,13 +119,16 @@ class Simulation( BaseClass ):
         ejection  = False
         timeLimit = False
 
-        valuesDict = self.__setupScenario( self.sampleRowIdx_ )
-        while not all([ collision, ejection, timeLimit ]):
-            valuesDict  = self.__runScenario( valuesDict )
+        valuesDict = self.setupScenario( self.sampleRowIdx_ )
+        dt   = valuesDict['dt']
+        maxT = inp.maxT
+        for _ in tqdm( range( int(maxT//dt) ) ):
+            valuesDict  = self.runScenario( valuesDict )
             collision   = valuesDict['collision']
             ejection    = valuesDict['ejection']
             timeLimit   = valuesDict['timeLimit']
-        self.__recordScenario( valuesDict )
+            if any([ collision, ejection, timeLimit ]): break
+        self.recordScenario( valuesDict )
 
     #===========================================================================#
     # semi-protected methods                                                    #
@@ -134,6 +139,8 @@ class Simulation( BaseClass ):
         data = pd.read_csv( inp.sampleFileName )
         data.rename( columns=inp.sampleFileColumnMap, inplace=True )
         data.drop( columns=inp.sampleFileDropColumns, inplace=True )
+        for colName in self.colNames_['all']:
+            if not colName in data: data[colName] = np.nan
         self.sample_ = data
 
     #===========================================================================#
@@ -147,7 +154,7 @@ class Simulation( BaseClass ):
         any random factors, other than initial speed, you'll have to implement\
         it!")
 
-    def __recordScenario( self, valuesDict ):
+    def recordScenario( self, valuesDict ):
         vd = valuesDict
 
         # collect results for ALL columns
@@ -156,7 +163,7 @@ class Simulation( BaseClass ):
             'collide'   : int( vd['collision'] ),
             'eject'     : int( vd['ejection'] ),
             'survive'   : int( vd['timeLimit'] ),
-            'nSteps'    : vd['steps'],
+            'nSteps'    : int( vd['steps'] ),
         }
         # add all final posigion and velocities
         for starIdx in range(3):
@@ -167,11 +174,10 @@ class Simulation( BaseClass ):
                 ):
                     colName = f"{name}_({starIdx},{coordinateIdx},-1)"
                     results[ colName ] = array[ starIdx, coordinateIdx ]
-
         for colName, value in results.items():
             self.sample_.loc[ self.sampleRowIdx_, colName ] = value
 
-    def __runScenario( self, valuesDict ):
+    def runScenario( self, valuesDict ):
         vd = valuesDict
 
         # update time, time step, positions, and velocities
@@ -196,7 +202,7 @@ class Simulation( BaseClass ):
         # return the updated values dictionary
         return vd
 
-    def __setupScenario( self, sampleRowIdx ):
+    def setupScenario( self, sampleRowIdx ):
 
         # scenario number
         n1 = self.sampleRowIdx_ + 1
@@ -218,6 +224,7 @@ class Simulation( BaseClass ):
                 else:
                     pdb.set_trace()
                     self.__columnAssertion( colName )
+                self.sample_.loc[ self.sampleRowIdx_, colName ] = spc_i3[ starIdx, coordinateIdx ]
 
         # construct masses
         m_i1 = np.zeros( (3,1) )
@@ -273,7 +280,7 @@ class Simulation( BaseClass ):
         # initialize time step using smallest quotent of distance & initial
         # speed
         # dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=inp.dt0ScaleFactor )
-        dt = 60 * 60
+        dt = 60*60*24
 
         # return all the locally defined variables as dictionary
         return locals()

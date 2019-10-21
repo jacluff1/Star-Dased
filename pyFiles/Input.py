@@ -86,7 +86,8 @@ randomFactorParams = (
 )
 
 # max run time ( s )
-maxT = 10 * kyr2s
+# maxT = 10 * kyr2s
+maxT = 10 * 60*60*24
 
 # initial time-step scale factor
 dt0ScaleFactor = 1e-3
