@@ -70,8 +70,6 @@ controlFactors = {
     'mass_(2)'      : ( 0.08, 50 ), # star 3 mass limits (solar mass)
     'vel_(2,1,0)'   : ( np.pi/2, (3/2)*np.pi ), # star 3 initial polar vel angle limits (radians)
 }
-
-# random factors
 # (starIdx, coordinateIdx, timeIdx)
 randomFactors = [
     'vel_(0,0,0)', # star 1 iniital speed (km/s)
@@ -86,8 +84,7 @@ randomFactorParams = (
 )
 
 # max run time ( s )
-# maxT = 10 * kyr2s
-maxT = 10 * 60*60*24
+maxT = 1 * yr2s
 
 # initial time-step scale factor
 dt0ScaleFactor = 1e-3

@@ -39,7 +39,7 @@ import warnings
 # auxillary                                                                     #
 #===============================================================================#
 
-def findIdx( value, array ):
+def findIdx(value, array):
     """
     use:
 
@@ -59,7 +59,7 @@ def findIdx( value, array ):
     idx = np.abs( array - value ).argmin()
     return idx
 
-def stellarColorLookup( m_i1 ):
+def stellarColorLookup(m_i1):
 
     # load stellar data to pd.DataFrame
     table = pd.read_csv( "data/starClass.txt" )
@@ -74,7 +74,7 @@ def stellarColorLookup( m_i1 ):
 
     return c_i1
 
-def stellarRadiiLookup( m_i1 ):
+def stellarRadiiLookup(m_i1):
 
     # load stellar data to pd.DataFrame
     table = pd.read_csv( "data/starClass.txt" )
@@ -110,7 +110,7 @@ def stellarRadiiLookup( m_i1 ):
 # coordinate frames                                                             #
 #===============================================================================#
 
-def findCM( x_i3, m_i1, **kwargs ):
+def findCM(x_i3, m_i1, **kwargs):
     """
     use:
 
@@ -130,7 +130,7 @@ def findCM( x_i3, m_i1, **kwargs ):
     CM = ( m_i1 * x_i3 ).sum( axis=0 ) / m_i1.sum() # ly
     return CM[None,:] # ly
 
-def spc2xyz( spc_i3, **kwargs ):
+def spc2xyz(spc_i3, **kwargs):
 
     r = spc_i3[:,0] # ly
 
@@ -148,7 +148,7 @@ def spc2xyz( spc_i3, **kwargs ):
 
     return x_i3 # ly
 
-def xyz2spc( x_i3, **kwargs ):
+def xyz2spc(x_i3, **kwargs):
 
     r   = np.sqrt( ( x_i3**2 ).sum( axis=1 ) ) # ly
     rho = np.sqrt( ( x_i3[:,:2]**2 ).sum( axis=1 ) ) # ly
@@ -165,7 +165,7 @@ def xyz2spc( x_i3, **kwargs ):
 # file handling                                                                 #
 #===============================================================================#
 
-def fromPickle( fromFile, **kwargs ):
+def fromPickle(fromFile, **kwargs):
     """
     use:
     loads object (preferably from dictionary) from file name provided. if not
@@ -203,7 +203,7 @@ def fromPickle( fromFile, **kwargs ):
 
     return toObject
 
-def toPickle( toFile, fromObject, **kwargs ):
+def toPickle(toFile, fromObject, **kwargs):
     """
     use:
     sends object (preferably dictionary) to pickle and saves at file name
@@ -243,7 +243,7 @@ def toPickle( toFile, fromObject, **kwargs ):
 
     printHeader( f"saved pickle to {toFile}", **kwargs )
 
-def saveFigure( toFile, fig, **kwargs ):
+def saveFigure(toFile, fig, **kwargs):
     """
     use:
     save a figure, print save destination if verbose
@@ -272,7 +272,7 @@ def saveFigure( toFile, fig, **kwargs ):
 # math & physics                                                                #
 #===============================================================================#
 
-def escapeSpeed( x_i3, m_i1 ):
+def escapeSpeed(x_i3, m_i1):
 
     warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide" )
 
@@ -292,7 +292,7 @@ def escapeSpeed( x_i3, m_i1 ):
 
     return speed_i1 # km/s
 
-def nBodyAcceleration( x_i3, m_i1 ):
+def nBodyAcceleration(x_i3, m_i1):
     """
     ( i , j , 3 )
     i --> on body
@@ -324,11 +324,11 @@ def nBodyAcceleration( x_i3, m_i1 ):
     a_i3 = f_i3 / m_i1 # km/s^2
     return a_i3 # km/s^2
 
-def pairwiseDifferenceVector( x_i3 ):
+def pairwiseDifferenceVector(x_i3):
     x_ij3 = x_i3 - x_i3[:,None,:] # ly
     return x_ij3 # ly
 
-def pairwiseDistance( x ):
+def pairwiseDistance(x):
 
     # determine if x is of form x_ij3
     if len( x.shape ) == 3:
@@ -342,31 +342,38 @@ def pairwiseDistance( x ):
     x_ij = np.sqrt( ( x_ij3**2 ).sum( axis=2 ) ) # ly
     return x_ij # ly
 
-def nBodyRungeKutta4( time, dt, x_i3, xdot_i3, m_i1 ):
+def nBodyRungeKutta4(time, dt, x_i3, xdot_i3, m_i1):
     """
     http://spiff.rit.edu/richmond/nbody/OrbitRungeKutta4.pdf
     """
 
     # find coefficients for RK4
     kr1  = xdot_i3 # km/s
-    kr1 *= inp.km2ly # ly/s
-    kv1  = nBodyAcceleration( x_i3, m_i1 ) # km/s^2
+    # kr1 *= inp.km2ly # ly/s
+    kv1  = nBodyAcceleration(x_i3, m_i1) # km/s^2
 
     kr2  = xdot_i3 * kv1 * dt/2 # km/s
-    kr2 *= inp.km2ly # ly/s
-    kv2  = nBodyAcceleration( x_i3 + kr1 * dt/2, m_i1 ) # km/s^2
+    # kr2 *= inp.km2ly # ly/s
+    kv2  = nBodyAcceleration(x_i3 + kr1 * dt/2, m_i1) # km/s^2
 
     kr3  = xdot_i3 * kv2 * dt/2 # km/s
-    kr3 *= inp.km2ly # ly/s
-    kv3  = nBodyAcceleration( x_i3 + kr2 * dt/2, m_i1 ) # km/s^2
+    # kr3 *= inp.km2ly # ly/s
+    kv3  = nBodyAcceleration(x_i3 + kr2 * dt/2, m_i1) # km/s^2
 
     kr4  = xdot_i3 * kv3 * dt # km/s
-    kr4 *= inp.km2ly # ly/s
-    kv4  = nBodyAcceleration( x_i3 + kr3 * dt/2, m_i1 ) # km/s^2
+    # kr4 *= inp.km2ly # ly/s
+    kv4  = nBodyAcceleration(x_i3 + kr3 * dt/2, m_i1) # km/s^2
 
     # update positions and velocities
-    x_i3    += ( dt/6 ) * ( kr1 + 2*kr2 + 2*kr3 + kr4 ) # ly
-    xdot_i3 += ( dt/6 ) * ( kv1 + 2*kv2 + 2*kv3 + kv4 ) # km/s^2
+    dx_i3 = (dt/6) * (kr1 + 2*kr2 + 2*kr3 + kr4) # ly
+    dv_i3 = (dt/6) * (kv1 + 2*kv2 + 2*kv3 + kv4) # km/s^2
+
+    # dv_i3 = nBodyAcceleration(x_i3, m_i1)
+    # dx_i3 = dv_i3*dt
+
+    # update positions and velocities
+    x_i3 += dx_i3
+    xdot_i3 += dv_i3
 
     # shift positions relative to CM
     CM_13 = findCM( x_i3, m_i1 ) # ly
@@ -376,12 +383,12 @@ def nBodyRungeKutta4( time, dt, x_i3, xdot_i3, m_i1 ):
     time += dt # s
 
     # update time-step
-    # dt = timeStep( x_i3, xdot_i3 ) # s
-
+    dt = timeStep( x_i3, xdot_i3 ) # s
+    pdb.set_trace()
     # output time, time-step, positions, and velocities
     return time, dt, x_i3, xdot_i3 # s, s, ly, km/s
 
-def timeStep( x_i3, xdot_i3, **kwargs ):
+def timeStep(x_i3, xdot_i3, **kwargs):
 
     initial = kwargs['initial'] if 'initial' in kwargs else False
     scale = kwargs['scale'] if 'scale' in kwargs else 1e-8
@@ -406,7 +413,7 @@ def timeStep( x_i3, xdot_i3, **kwargs ):
 # printing                                                                      #
 #===============================================================================#
 
-def printBreak( **kwargs ):
+def printBreak(**kwargs):
     """
     use:
     prints a decorated break in terminal
@@ -432,7 +439,7 @@ def printBreak( **kwargs ):
         ========================================================================\
     \n")
 
-def printDict( dictionary, **kwargs ):
+def printDict(dictionary, **kwargs):
     """
     use:
     prints dictionary in a decorated and readable format
@@ -469,7 +476,7 @@ def printDict( dictionary, **kwargs ):
                 lines.append( f"{key}:\t{value}" )
         printHeader( *lines, **kwargs )
 
-def printHeader( *args, **kwargs ):
+def printHeader(*args, **kwargs):
     """
     use:
     prints a decorated section header with any optional provided arguments
@@ -503,7 +510,7 @@ def printHeader( *args, **kwargs ):
                 print( f"\t{arg}" )
         printBreak( **kwargs )
 
-def printList( list1, **kwargs ):
+def printList(list1, **kwargs):
     """
     use:
 
@@ -538,7 +545,7 @@ def printList( list1, **kwargs ):
 # random generator                                                              #
 #===============================================================================#
 
-def randomSpeed( maxSpeed_i1 ):
+def randomSpeed(maxSpeed_i1):
 
     # make empty array with same shape as input
     spcdot_i3 = np.zeros( maxSpeed_i1.shape ) # km/s
@@ -568,7 +575,7 @@ def randomSpeed( maxSpeed_i1 ):
 # termination conditions                                                        #
 #===============================================================================#
 
-def checkCollision( x_i3, r_i1 ):
+def checkCollision(x_i3, r_i1):
 
     # find the pair-wise distance for each body
     x_ij = pairwiseDistance( x_i3 ) # ly
@@ -582,7 +589,7 @@ def checkCollision( x_i3, r_i1 ):
     collisions = ( r_ij > x_ij ) # ly
     return np.any( collisions ) # bool
 
-def checkEjection( x_i3, xdot_i3, m_i1 ):
+def checkEjection(x_i3, xdot_i3, m_i1):
 
     # determine the escape velocity from the system for each body
     vEscape_i1 = escapeSpeed( x_i3, m_i1 ) # km/s

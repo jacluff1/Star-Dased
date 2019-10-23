@@ -103,57 +103,6 @@ class Simulation( BaseClass ):
             self.saveState()
         self.sample_.to_csv( "data/Simulation.csv", index=False )
 
-    #===========================================================================#
-    # puplic methods                                                            #
-    # required for BaseClass, implemented here                                  #
-    #===========================================================================#
-
-    #===========================================================================#
-    # semi-protected methods                                                    #
-    #===========================================================================#
-
-    def _runScenario( self, **kwargs ):
-
-        # set terminition conditions
-        collision = False
-        ejection  = False
-        timeLimit = False
-
-        valuesDict = self.setupScenario( self.sampleRowIdx_ )
-        dt   = valuesDict['dt']
-        maxT = inp.maxT
-        for _ in tqdm( range( int(maxT//dt) ) ):
-            valuesDict  = self.runScenario( valuesDict )
-            collision   = valuesDict['collision']
-            ejection    = valuesDict['ejection']
-            timeLimit   = valuesDict['timeLimit']
-            if any([ collision, ejection, timeLimit ]): break
-        self.recordScenario( valuesDict )
-
-    #===========================================================================#
-    # semi-protected methods                                                    #
-    # required for BaseClass, implemented here                                  #
-    #===========================================================================#
-
-    def _getSample( self ):
-        data = pd.read_csv( inp.sampleFileName )
-        data.rename( columns=inp.sampleFileColumnMap, inplace=True )
-        data.drop( columns=inp.sampleFileDropColumns, inplace=True )
-        for colName in self.colNames_['all']:
-            if not colName in data: data[colName] = np.nan
-        self.sample_ = data
-
-    #===========================================================================#
-    # semi-private                                                              #
-    #===========================================================================#
-
-    def __columnAssertion( self, colName ):
-        raise AssertionError(f"can't seem to find {colName}! You \
-        have to either include it in constant factors, control\
-        factors, or random factors. If you want to include\
-        any random factors, other than initial speed, you'll have to implement\
-        it!")
-
     def recordScenario( self, valuesDict ):
         vd = valuesDict
 
@@ -213,7 +162,7 @@ class Simulation( BaseClass ):
         sampleRow = self.sample_.iloc[ sampleRowIdx ]
 
         # construct SPC positions
-        spc_i3 = np.zeros( (3,3) )
+        spc_i3 = np.zeros( (3,3) ) # ly, rad, rad
         for starIdx in range(3):
             for coordinateIdx in range(3):
                 colName = f"pos_({starIdx},{coordinateIdx},0)"
@@ -227,7 +176,7 @@ class Simulation( BaseClass ):
                 self.sample_.loc[ sampleRowIdx, colName ] = spc_i3[ starIdx, coordinateIdx ]
 
         # construct masses
-        m_i1 = np.zeros( (3,1) )
+        m_i1 = np.zeros( (3,1) ) # solar mass
         for starIdx in range(3):
             colName = f"mass_({starIdx})"
             if colName in inp.constantFactors:
@@ -238,7 +187,7 @@ class Simulation( BaseClass ):
                 self.__columnAssertion( colName )
 
         # calculate XYZ positions
-        x_i3 = fun.spc2xyz( spc_i3 )
+        x_i3 = fun.spc2xyz( spc_i3 ) # ly
 
         # calculate CM of the new system ( vector from current origin to CM )
         CM_13 = fun.findCM( x_i3, m_i1 )
@@ -280,10 +229,62 @@ class Simulation( BaseClass ):
         # initialize time step using smallest quotent of distance & initial
         # speed
         # dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=inp.dt0ScaleFactor )
-        dt = 60*60*24
+        dt = 60*60*24*365.25
 
+        pdb.set_trace()
         # return all the locally defined variables as dictionary
         return locals()
+
+    #===========================================================================#
+    # puplic methods                                                            #
+    # required for BaseClass, implemented here                                  #
+    #===========================================================================#
+
+    #===========================================================================#
+    # semi-protected methods                                                    #
+    #===========================================================================#
+
+    def _runScenario( self, **kwargs ):
+
+        # set terminition conditions
+        collision = False
+        ejection  = False
+        timeLimit = False
+
+        valuesDict = self.setupScenario( self.sampleRowIdx_ )
+        dt   = valuesDict['dt']
+        maxT = inp.maxT
+        for _ in tqdm( range( int(maxT//dt) ) ):
+            valuesDict  = self.runScenario( valuesDict )
+            collision   = valuesDict['collision']
+            ejection    = valuesDict['ejection']
+            timeLimit   = valuesDict['timeLimit']
+            if any([ collision, ejection, timeLimit ]): break
+        self.recordScenario( valuesDict )
+
+    #===========================================================================#
+    # semi-protected methods                                                    #
+    # required for BaseClass, implemented here                                  #
+    #===========================================================================#
+
+    def _getSample( self ):
+        data = pd.read_csv( inp.sampleFileName )
+        data.rename( columns=inp.sampleFileColumnMap, inplace=True )
+        data.drop( columns=inp.sampleFileDropColumns, inplace=True )
+        for colName in self.colNames_['all']:
+            if not colName in data: data[colName] = np.nan
+        self.sample_ = data
+
+    #===========================================================================#
+    # semi-private                                                              #
+    #===========================================================================#
+
+    def __columnAssertion( self, colName ):
+        raise AssertionError(f"can't seem to find {colName}! You \
+        have to either include it in constant factors, control\
+        factors, or random factors. If you want to include\
+        any random factors, other than initial speed, you'll have to implement\
+        it!")
 
 #===============================================================================#
 # main                                                                          #
