@@ -23,6 +23,14 @@ m2km = 1e-3
 m2ly = 1.057e-16
 # kilometer to lightyear
 km2ly = 1.057e-13
+# solar radius to AU
+sr2au = 4.65047e-3
+# meter to AU
+m2au = 6.68459e-12
+# kilometer to AU
+km2au = 6.6846e-9
+# light year to AU
+ly2au = 63241.1
 
 # kilogram to solar mass
 kg2solar = 5.02785e-31
@@ -36,8 +44,8 @@ kyr2s = yr2s * 1e3
 # constants                                                                     #
 #===============================================================================#
 
-# gravitational constant ( km/s )^2 ( ly )^1 ( solar mass )^-1
-G = 6.67408e-11 * m2km**2 * m2ly / kg2solar
+# gravitational constant ( km/s )^2 ( AU )^1 ( solar mass )^-1
+G = 6.67408e-11 * m2km**2 * m2au / kg2solar
 
 #===============================================================================#
 # parameters                                                                    #
@@ -61,10 +69,10 @@ constantFactors = {
 # control factors
 # (starIdx, coordinateIdx, timeIdx)
 controlFactors = {
-    'pos_(0,0,0)'   : ( 0.1, 5.0 ), # star 1 initial radial position limits (ly)
-    'pos_(1,0,0)'   : ( 0.1, 5.0 ), # star 2 initial radial position limits (ly)
-    'pos_(2,0,0)'   : ( 0.1, 5.0 ), # star 3 initial radial position limits (ly)
-    'pos_(2,1,0)'   : ( 0.0, np.pi/2 ), # star 3 initial polar pos angle limits (ly)
+    'pos_(0,0,0)'   : ( 20, 2000 ), # star 1 initial radial position limits (AU)
+    'pos_(1,0,0)'   : ( 20, 2000 ), # star 2 initial radial position limits (AU)
+    'pos_(2,0,0)'   : ( 20, 2000 ), # star 3 initial radial position limits (AU)
+    'pos_(2,1,0)'   : ( 0.0, np.pi/2 ), # star 3 initial polar pos angle limits (radians)
     'mass_(0)'      : ( 0.08, 50 ), # star 1 mass limits (solar mass)
     'mass_(1)'      : ( 0.08, 50 ), # star 2 mass limits (solar mass)
     'mass_(2)'      : ( 0.08, 50 ), # star 3 mass limits (solar mass)
@@ -84,7 +92,7 @@ randomFactorParams = (
 )
 
 # max run time ( s )
-maxT = 1 * yr2s
+maxT = 10 * kyr2s
 
 # initial time-step scale factor
 dt0ScaleFactor = 1e-3
