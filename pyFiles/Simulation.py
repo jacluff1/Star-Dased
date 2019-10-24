@@ -106,11 +106,21 @@ class Simulation( BaseClass ):
     def recordScenario( self, valuesDict ):
         vd = valuesDict
 
+        pResults = {
+            'collide'   : 'COLLISION!',
+            'eject'     : 'EJECTION!',
+            'timeLimit' : "I WILL SURVIVE!"
+        }
+
+        year = vd[ 'time' ] / inp.yr2s
+        for key, item in pResults.items():
+            if bool( vd[ key ] ): print( f"{pResults[ key ]} @ year = {year:0.2f}" )
+
         # collect results for ALL columns
         results = {
             'runTime'   : vd['time'],
-            'collide'   : int( vd['collision'] ),
-            'eject'     : int( vd['ejection'] ),
+            'collide'   : int( vd['collide'] ),
+            'eject'     : int( vd['eject'] ),
             'survive'   : int( vd['timeLimit'] ),
             'nSteps'    : int( vd['steps'] ),
         }
@@ -123,6 +133,12 @@ class Simulation( BaseClass ):
                 ):
                     colName = f"{name}_({starIdx},{coordinateIdx},-1)"
                     results[ colName ] = array[ starIdx, coordinateIdx ]
+                for name, array in zip(
+                    [ 'pos'       , 'vel'           ],
+                    [ vd['spc_i3'], vd['spcdot_i3'] ]
+                ):
+                    colName = f"{name}_({starIdx},{coordinateIdx},0)"
+                    results[ colName ] = array[ starIdx, coordinateIdx ]
         for colName, value in results.items():
             self.sample_.loc[ self.sampleRowIdx_, colName ] = value
 
@@ -133,10 +149,10 @@ class Simulation( BaseClass ):
         vd['time'], vd['dt'], vd['x_i3_t'], vd['xdot_i3_t'] = fun.nBodyRungeKutta4( vd['time'], vd['dt'], vd['x_i3_t'], vd['xdot_i3_t'], vd['m_i1'] )
 
         # see if any stars collided
-        vd['collision'] = fun.checkCollision( vd['x_i3_t'], vd['r_i1'] )
+        vd['collide'] = fun.checkCollision( vd['x_i3_t'], vd['r_i1'] )
 
         # see if any stars are moving to fast
-        vd['ejection'] = fun.checkEjection( vd['x_i3_t'], vd['xdot_i3_t'], vd['m_i1'] )
+        vd['eject'] = fun.checkEjection( vd['x_i3_t'], vd['xdot_i3_t'], vd['m_i1'] )
 
         # see if timit limit has been exceeded
         vd['timeLimit'] = ( vd['time'] >= inp.maxT )
@@ -162,7 +178,7 @@ class Simulation( BaseClass ):
         sampleRow = self.sample_.iloc[ sampleRowIdx ]
 
         # construct SPC positions
-        spc_i3 = np.zeros( (3,3) ) # ly, rad, rad
+        spc_i3 = np.zeros( (3,3) ) # AU, rad, rad
         for starIdx in range(3):
             for coordinateIdx in range(3):
                 colName = f"pos_({starIdx},{coordinateIdx},0)"
@@ -187,21 +203,21 @@ class Simulation( BaseClass ):
                 self.__columnAssertion( colName )
 
         # calculate XYZ positions
-        x_i3 = fun.spc2xyz( spc_i3 ) # ly
+        x_i3 = fun.spc2xyz( spc_i3 ) # AU
 
         # calculate CM of the new system ( vector from current origin to CM )
-        CM_13 = fun.findCM( x_i3, m_i1 )
+        CM_13 = fun.findCM( x_i3, m_i1 ) # AU
 
         # make CM the new origin ( subtract CM vector from star positions )
-        x_i3 -= CM_13
+        x_i3 -= CM_13 # AU
 
         # calculate escape velocity from system
-        escapeSpeed_i1 = fun.escapeSpeed( x_i3, m_i1 )
+        escapeSpeed_i1 = fun.escapeSpeed( x_i3, m_i1 ) # km/s
 
         # construct spc initial velocity vectors
-        spcdot_i3 = np.zeros( (3,3) )
+        spcdot_i3 = np.zeros( (3,3) ) # (km/s, radian, radian)
         # assign random speed
-        spcdot_i3[ : , 0 ] = fun.randomSpeed( escapeSpeed_i1 )[:,0]
+        spcdot_i3[ : , 0 ] = fun.randomSpeed( escapeSpeed_i1 )[:,0] # (km/s, radian, radian)
         # assign angles
         for starIdx in range(3):
             for coordinateIdx in [ 1, 2 ]:
@@ -214,24 +230,23 @@ class Simulation( BaseClass ):
                     self.__columnAssertion( colName )
 
         # calculate XYZ velocities
-        xdot_i3 = fun.spc2xyz( spcdot_i3 )
+        xdot_i3 = fun.spc2xyz( spcdot_i3 ) # km/s
 
         # find star radii
-        r_i1 = fun.stellarRadiiLookup( m_i1 )
+        r_i1 = fun.stellarRadiiLookup( m_i1 ) # AU
 
         # set starting run time and step counter
-        steps, time = 0, 0
+        steps, time = 0, 0 # int, s
 
         # initialize time and positions to be updated
-        x_i3_t    = deepcopy( x_i3 )
-        xdot_i3_t = deepcopy( xdot_i3 )
+        x_i3_t    = deepcopy( x_i3 ) # AU
+        xdot_i3_t = deepcopy( xdot_i3 ) # km/s
 
         # initialize time step using smallest quotent of distance & initial
         # speed
-        # dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=inp.dt0ScaleFactor )
-        dt = 60*60*24*365.25
+        dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=inp.dt0ScaleFactor )
+        # dt = 60*60*24*365.25
 
-        pdb.set_trace()
         # return all the locally defined variables as dictionary
         return locals()
 
@@ -247,8 +262,8 @@ class Simulation( BaseClass ):
     def _runScenario( self, **kwargs ):
 
         # set terminition conditions
-        collision = False
-        ejection  = False
+        collide   = False
+        eject     = False
         timeLimit = False
 
         valuesDict = self.setupScenario( self.sampleRowIdx_ )
@@ -256,8 +271,8 @@ class Simulation( BaseClass ):
         maxT = inp.maxT
         for _ in tqdm( range( int(maxT//dt) ) ):
             valuesDict  = self.runScenario( valuesDict )
-            collision   = valuesDict['collision']
-            ejection    = valuesDict['ejection']
+            collision   = valuesDict['collide']
+            ejection    = valuesDict['eject']
             timeLimit   = valuesDict['timeLimit']
             if any([ collision, ejection, timeLimit ]): break
         self.recordScenario( valuesDict )
@@ -268,11 +283,28 @@ class Simulation( BaseClass ):
     #===========================================================================#
 
     def _getSample( self ):
+        # load generated sample file
         data = pd.read_csv( inp.sampleFileName )
+        # rename columns according to columns defined in input
         data.rename( columns=inp.sampleFileColumnMap, inplace=True )
+        # drop pointless columns
         data.drop( columns=inp.sampleFileDropColumns, inplace=True )
+        # enforce integers in bool columns and index columns
+        for colName in ['treatmentN', 'monteCarloN', 'nSteps', 'collide', 'eject', 'survive']:
+            if colName not in data:
+                data[colName] = 0
+            else:
+                data[colName] = data[colName].astype(int)
+        # create columns with NaNs that will be filled in as sim runs
         for colName in self.colNames_['all']:
-            if not colName in data: data[colName] = np.nan
+            if colName not in data: data[colName] = np.nan
+        # rescale starting position radii to be within limits in Input.controlFactors
+        for starIdx in range(3):
+            colName = f"pos_({starIdx},0,0)"
+            x = data[colName]
+            Z = (x - x.min()) / (x.max() - x.min())
+            LL, UL = inp.controlFactors[colName]
+            data[colName] = Z * (UL - LL) + LL
         self.sample_ = data
 
     #===========================================================================#

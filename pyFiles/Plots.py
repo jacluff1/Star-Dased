@@ -64,6 +64,8 @@ def staticPositionPlot( sampleRowIdx=0, timeIdx=0, **kwargs ):
     # look up radii and colors
     r_i1 = fun.stellarRadiiLookup( m_i3 )
     c_i1 = fun.stellarColorLookup( m_i3 )
+    size = 100**(r_i1[:,0] + 1)
+    # print(size)
 
     # find CM
     CM = fun.findCM( x_i3, m_i3 )
@@ -76,7 +78,7 @@ def staticPositionPlot( sampleRowIdx=0, timeIdx=0, **kwargs ):
     fig.suptitle( f"3D Positions for Sample {sampleRowIdx} and Time {timeIdx}", fontsize=fontsize+4 )
 
     ax = fig.add_subplot( 111, projection='3d' )
-    ax.scatter( x_i3[:,0], x_i3[:,1], x_i3[:,2], c=c_i1[:,0], s=1e9*r_i1[:,0], alpha=alpha, label='Star Positions' )
+    ax.scatter( x_i3[:,0], x_i3[:,1], x_i3[:,2], c=c_i1[:,0], s=size, alpha=alpha, label='Star Positions' )
     ax.plot( CM[:,0], CM[:,1], CM[:,2], color='#EC13E2', marker='X', markersize=12, label='Center of Mass' )
     ax.plot( [-xmax,xmax],[0,0],[0,0], 'c', linewidth=3, label='x' )
     ax.plot( [0,0],[-xmax,xmax],[0,0], 'g', linewidth=3, label='y' )
@@ -118,11 +120,11 @@ def scenarioAnimation( sampleRowIdx=0, timeIdx=0, **kwargs ):
         valuesDict = sim.setupScenario(sampleRowIdx)
         dt = valuesDict['dt']
         maxT = inp.maxT
-        for _ in tqdm(range(100)):
+        for _ in tqdm(range(10)):
 
             valuesDict = sim.runScenario( valuesDict)
-            collision = valuesDict['collision']
-            ejection = valuesDict['ejection']
+            collision = valuesDict['collide']
+            ejection = valuesDict['eject']
             timeLimit = valuesDict['timeLimit']
             if any([ collision, ejection, timeLimit ]): break
 
@@ -130,8 +132,9 @@ def scenarioAnimation( sampleRowIdx=0, timeIdx=0, **kwargs ):
             m_i1 = valuesDict['m_i1']
             r_i1 = valuesDict['r_i1']
             c_i1 = fun.stellarColorLookup(m_i1)
+            time = valuesDict['time']
             xmax = x_i3.max()*1.1
-            yield x_i3, m_i1, r_i1, c_i1, xmax
+            yield x_i3, m_i1, r_i1, c_i1, time, xmax
 
     # create a figure with two subplots
     fig,ax = plt.subplots(nrows=2, ncols=2, sharex=True, sharey=True, figsize=(15,15))
@@ -139,34 +142,39 @@ def scenarioAnimation( sampleRowIdx=0, timeIdx=0, **kwargs ):
     # collect lines and set up axies
     line = []
     for x in ax.flatten()[:-1]:
-        l1, = (x.plot( [], [], color='c', marker='*', markersize=20)) # stars
+        l1, = (x.plot( [], [], 'co', markersize=20)) # stars
         line.append(l1)
-
-    for x in ax.flatten():
-        # x.grid()
-        x.set_aspect('equal')
-        x.set_facecolor('k')
-    for i, j, title in zip([0,0,1,1], [0,1,0,1], ['X-Y','X-Z','Y-Z','None']):
-        ax[i,j].set_title(title, fontsize=24)
 
     def run( data ):
 
         # update the data
-        x_i3, m_i1, r_i1, c_i1, xmax = data
+        x_i3, m_i1, r_i1, c_i1, time, xmax = data
+        year = time / inp.yr2s
 
         # axis limits checking. Same as before, just for both axes
-        for i, x in enumerate(ax.flatten()[:-1]):
-            x.plot([-xmax, xmax], [0, 0], 'w', lw=3, alpha=0.5)
-            x.plot([0, 0], [-xmax, xmax], 'w', lw=3, alpha=0.5)
+        for x, title in zip(ax.flatten()[:-1], ['X-Y', 'X-Z', 'Y-Z']):
+            x.clear()
+            x.set_aspect('equal')
+            x.set_facecolor('k')
+            x.set_title( title, fontsize=24)
             x.set_xlim(-xmax, xmax)
             x.set_ylim(-xmax, xmax)
+            x.plot([-xmax, xmax], [0, 0], 'w', lw=1, alpha=0.5)
+            x.plot([0, 0], [-xmax, xmax], 'w', lw=1, alpha=0.5)
+            x.annotate(
+                f"year = {year:0.2f}",
+                (-xmax*.9, xmax*.8),
+                color = 'r',
+                fontsize = 20
+            )
             x.figure.canvas.draw()
 
         # update the data of both line objects
         # pdb.set_trace()
-        line[0].set_data( x_i3[:,0], x_i3[:,1])
-        line[1].set_data( x_i3[:,0], x_i3[:,2])
-        line[2].set_data( x_i3[:,1], x_i3[:,2])
+        line[0].set_data(x_i3[:,0], x_i3[:,1])
+        line[1].set_data(x_i3[:,0], x_i3[:,2])
+        line[2].set_data(x_i3[:,1], x_i3[:,2])
+        # for x in ax.flatten()[:-1]: x.figure.canvas.draw()
 
         return line
 
@@ -197,5 +205,5 @@ if __name__ == "__main__":
     if args.sampleRowIdx != None: kwargs['sampleRowIdx'] = int(args.sampleRowIdx)
     if args.timeIdx != None: kwargs['timeIdx'] = int(args.sample)
 
-    # staticPositionPlot( **kwargs )
-    ani = scenarioAnimation()
+    # staticPositionPlot(**kwargs)
+    scenarioAnimation(**kwargs)

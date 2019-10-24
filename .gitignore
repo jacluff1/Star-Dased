@@ -1,9 +1,10 @@
 # ignore folders
 legacy_pyFiles/
 StarDasedVenv/
+temp/
 
 # ignore files
-temp/
+**_bu*
 
 # ignore file types
 **.pyc
