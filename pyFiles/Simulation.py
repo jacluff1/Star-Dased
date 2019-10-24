@@ -106,6 +106,16 @@ class Simulation( BaseClass ):
     def recordScenario( self, valuesDict ):
         vd = valuesDict
 
+        pResults = {
+            'collide'   : 'COLLISION!',
+            'eject'     : 'EJECTION!',
+            'timeLimit' : "I WILL SURVIVE!"
+        }
+
+        year = vd[ 'time' ] / inp.yr2s
+        for key, item in pResults.items():
+            if bool( vd[ key ] ): print( f"{pResults[ key ]} @ year = {year:0.2f}" )
+
         # collect results for ALL columns
         results = {
             'runTime'   : vd['time'],
@@ -122,6 +132,12 @@ class Simulation( BaseClass ):
                     [ vd['spc_i3_t'], vd['spcdot_i3_t'] ]
                 ):
                     colName = f"{name}_({starIdx},{coordinateIdx},-1)"
+                    results[ colName ] = array[ starIdx, coordinateIdx ]
+                for name, array in zip(
+                    [ 'pos'       , 'vel'           ],
+                    [ vd['spc_i3'], vd['spcdot_i3'] ]
+                ):
+                    colName = f"{name}_({starIdx},{coordinateIdx},0)"
                     results[ colName ] = array[ starIdx, coordinateIdx ]
         for colName, value in results.items():
             self.sample_.loc[ self.sampleRowIdx_, colName ] = value

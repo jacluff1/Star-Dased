@@ -347,29 +347,29 @@ def nBodyRungeKutta4(time, dt, x_i3, xdot_i3, m_i1):
     http://spiff.rit.edu/richmond/nbody/OrbitRungeKutta4.pdf
     """
 
-    # # find coefficients for RK4
-    # kr1  = xdot_i3 # km/s
-    # kr1 *= inp.km2au # AU/s
-    # kv1  = nBodyAcceleration(x_i3, m_i1) # km/s^2
-    #
-    # kr2  = xdot_i3 + kv1 * dt/2 # km/s
-    # kr2 *= inp.km2au # AU/s
-    # kv2  = nBodyAcceleration(x_i3 + kr1 * dt/2, m_i1) # km/s^2
-    #
-    # kr3  = xdot_i3 + kv2 * dt/2 # km/s
-    # kr3 *= inp.km2au # AU/s
-    # kv3  = nBodyAcceleration(x_i3 + kr2 * dt/2, m_i1) # km/s^2
-    #
-    # kr4  = xdot_i3 + kv3 * dt # km/s
-    # kr4 *= inp.km2au # AU/s
-    # kv4  = nBodyAcceleration(x_i3 + kr3 * dt, m_i1) # km/s^2
-    #
-    # # update positions and velocities
-    # dx_i3 = (dt/6) * (kr1 + 2*kr2 + 2*kr3 + kr4) # AU
-    # dv_i3 = (dt/6) * (kv1 + 2*kv2 + 2*kv3 + kv4) # km/s
+    # find coefficients for RK4
+    kr1  = xdot_i3 # km/s
+    kr1 *= inp.km2au # AU/s
+    kv1  = nBodyAcceleration(x_i3, m_i1) # km/s^2
 
-    dv_i3 = nBodyAcceleration(x_i3, m_i1) * dt # km/s^2
-    dx_i3 = dv_i3 * inp.km2au * dt # AU
+    kr2  = xdot_i3 + kv1 * dt/2 # km/s
+    kr2 *= inp.km2au # AU/s
+    kv2  = nBodyAcceleration(x_i3 + kr1 * dt/2, m_i1) # km/s^2
+
+    kr3  = xdot_i3 + kv2 * dt/2 # km/s
+    kr3 *= inp.km2au # AU/s
+    kv3  = nBodyAcceleration(x_i3 + kr2 * dt/2, m_i1) # km/s^2
+
+    kr4  = xdot_i3 + kv3 * dt # km/s
+    kr4 *= inp.km2au # AU/s
+    kv4  = nBodyAcceleration(x_i3 + kr3 * dt, m_i1) # km/s^2
+
+    # update positions and velocities
+    dx_i3 = (dt/6) * (kr1 + 2*kr2 + 2*kr3 + kr4) # AU
+    dv_i3 = (dt/6) * (kv1 + 2*kv2 + 2*kv3 + kv4) # km/s
+
+    # dv_i3_e = nBodyAcceleration(x_i3, m_i1) * dt # km/s^2
+    # dx_i3_e = dv_i3 * inp.km2au * dt # AU
 
     # update positions and velocities
     x_i3 += dx_i3 # AU
@@ -406,7 +406,7 @@ def timeStep(dx_i3, dv_i3, **kwargs):
     # find the speeds
     dv_1 = np.sqrt( ( dv_i3**2 ).sum( axis=1 ) ) # km/s
     # calulate time step, take the minimum quotient
-    delta_t = ( dx_1 / dv_1 ).min() # s
+    delta_t = np.abs( dx_1 / dv_1 ).min() # s
     return delta_t # s
 
 #===============================================================================#
@@ -588,7 +588,6 @@ def checkCollision(x_i3, r_i1):
     # determine any collitions
     collisions = ( r_ij > x_ij ) # bool
     collide = np.any( collisions ) # bool
-    if collide: printHeader("COLLISION!", verbose=True)
     return collide
 
 def checkEjection(x_i3, xdot_i3, m_i1):
@@ -602,5 +601,4 @@ def checkEjection(x_i3, xdot_i3, m_i1):
     # determine any eminent ejections
     ejections = ( speed_i1 > vEscape_i1 ) # km/s
     eject = np.any( ejections ) # bool
-    if eject: printHeader("EJECTION!", verbose=True)
     return eject

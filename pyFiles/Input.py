@@ -69,9 +69,9 @@ constantFactors = {
 # control factors
 # (starIdx, coordinateIdx, timeIdx)
 controlFactors = {
-    'pos_(0,0,0)'   : ( 20, 2000 ), # star 1 initial radial position limits (AU)
-    'pos_(1,0,0)'   : ( 20, 2000 ), # star 2 initial radial position limits (AU)
-    'pos_(2,0,0)'   : ( 20, 2000 ), # star 3 initial radial position limits (AU)
+    'pos_(0,0,0)'   : ( 20, 200 ), # star 1 initial radial position limits (AU)
+    'pos_(1,0,0)'   : ( 20, 200 ), # star 2 initial radial position limits (AU)
+    'pos_(2,0,0)'   : ( 20, 200 ), # star 3 initial radial position limits (AU)
     'pos_(2,1,0)'   : ( 0.0, np.pi/2 ), # star 3 initial polar pos angle limits (radians)
     'mass_(0)'      : ( 0.08, 50 ), # star 1 mass limits (solar mass)
     'mass_(1)'      : ( 0.08, 50 ), # star 2 mass limits (solar mass)
