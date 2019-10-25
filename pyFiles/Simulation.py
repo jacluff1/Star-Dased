@@ -244,8 +244,8 @@ class Simulation( BaseClass ):
 
         # initialize time step using smallest quotent of distance & initial
         # speed
-        dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=inp.dt0ScaleFactor )
-        # dt = 60*60*24*365.25
+        # dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=inp.dt0ScaleFactor )
+        dt = inp.yr2s / 2
 
         # return all the locally defined variables as dictionary
         return locals()

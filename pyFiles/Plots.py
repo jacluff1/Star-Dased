@@ -122,11 +122,11 @@ def scenarioAnimation( sampleRowIdx=0, timeIdx=0, **kwargs ):
         maxT = inp.maxT
         for _ in tqdm(range(10)):
 
-            valuesDict = sim.runScenario( valuesDict)
+            valuesDict = sim.runScenario(valuesDict)
             collision = valuesDict['collide']
             ejection = valuesDict['eject']
             timeLimit = valuesDict['timeLimit']
-            if any([ collision, ejection, timeLimit ]): break
+            if any([collision, ejection, timeLimit]): break
 
             x_i3 = valuesDict['x_i3_t']
             m_i1 = valuesDict['m_i1']
@@ -142,7 +142,7 @@ def scenarioAnimation( sampleRowIdx=0, timeIdx=0, **kwargs ):
     # collect lines and set up axies
     line = []
     for x in ax.flatten()[:-1]:
-        l1, = (x.plot( [], [], 'co', markersize=20)) # stars
+        l1, = (x.plot([], [], 'co', markersize=20)) # stars
         line.append(l1)
 
     def run( data ):
@@ -152,11 +152,12 @@ def scenarioAnimation( sampleRowIdx=0, timeIdx=0, **kwargs ):
         year = time / inp.yr2s
 
         # axis limits checking. Same as before, just for both axes
-        for x, title in zip(ax.flatten()[:-1], ['X-Y', 'X-Z', 'Y-Z']):
+        for x, title, xIdx, yIdx, in zip(ax.flatten()[:-1], ['X-Y', 'X-Z', 'Y-Z'], [0,0,1], [1,2,2]):
             x.clear()
             x.set_aspect('equal')
             x.set_facecolor('k')
             x.set_title( title, fontsize=24)
+            x.plot(x_i3[:,xIdx], x_i3[:,yIdx], 'co', markersize=20)
             x.set_xlim(-xmax, xmax)
             x.set_ylim(-xmax, xmax)
             x.plot([-xmax, xmax], [0, 0], 'w', lw=1, alpha=0.5)
@@ -171,11 +172,12 @@ def scenarioAnimation( sampleRowIdx=0, timeIdx=0, **kwargs ):
 
         # update the data of both line objects
         # pdb.set_trace()
-        line[0].set_data(x_i3[:,0], x_i3[:,1])
-        line[1].set_data(x_i3[:,0], x_i3[:,2])
-        line[2].set_data(x_i3[:,1], x_i3[:,2])
+        # line[0].set_data(x_i3[:,0], x_i3[:,1])
+        # line[1].set_data(x_i3[:,0], x_i3[:,2])
+        # line[2].set_data(x_i3[:,1], x_i3[:,2])
         # for x in ax.flatten()[:-1]: x.figure.canvas.draw()
 
+        # return line
         return line
 
     ani = animation.FuncAnimation(fig, run, data_gen, blit=True, interval=100, repeat=False)
@@ -189,21 +191,21 @@ def scenarioAnimation( sampleRowIdx=0, timeIdx=0, **kwargs ):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--sampleRowIdx')
-    parser.add_argument('--timeIdx')
-    parser.add_argument('--show')
+    parser.add_argument('--sampleRowIdx', default=0)
+    parser.add_argument('--timeIdx', default=0)
+    parser.add_argument('--show', default=True)
+    parser.add_argument('--positionPlot', default=False)
+    parser.add_argument('--animation', default=False)
     args = parser.parse_args()
-
-    # set default key words
-    kwargs = {
-        'sampleRowIdx' : 0,
-        'timeIdx' : 0,
-        'show' : False,
-    }
+    kwargs = args.__dict__
 
     # update key word arguments if presented
-    if args.sampleRowIdx != None: kwargs['sampleRowIdx'] = int(args.sampleRowIdx)
-    if args.timeIdx != None: kwargs['timeIdx'] = int(args.sample)
+    for key in ['sampleRowIdx', 'timeIdx']: kwargs[key] = int(kwargs[key])
+    for key in ['show', 'positionPlot', 'animation']:
+        if any([kwargs[key]=="false", kwargs[key]=='False', kwargs[key]=='0']):
+            kwargs[key] = False
+        elif any([kwargs[key]=='true', kwargs[key]=='True', kwargs[key]=='1']):
+            kwargs[key] = True
 
-    # staticPositionPlot(**kwargs)
-    scenarioAnimation(**kwargs)
+    if kwargs['positionPlot']: staticPositionPlot(**kwargs)
+    if kwargs['animation']: scenarioAnimation(**kwargs)

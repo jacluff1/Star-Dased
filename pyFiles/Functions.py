@@ -197,9 +197,8 @@ def fromPickle(fromFile, **kwargs):
     else:
         return {}
 
-    toObject = pickle.load(
-    open( fromFile, 'rb' ) # read the byte file
-    )
+    with open(fromFile, "rb") as f:
+        toObject = pickle.load(f)
 
     return toObject
 
@@ -236,10 +235,8 @@ def toPickle(toFile, fromObject, **kwargs):
     # else:
     #     pdb.set_trace()
 
-    pickle.dump(
-        fromObject,             # object to write
-        open( toFile, "wb" )    # open file and write object to it in bytes
-    )
+    with open(toFile, "wb") as f:
+        pickle.dump(fromObject, f)
 
     printHeader( f"saved pickle to {toFile}", **kwargs )
 
@@ -383,7 +380,7 @@ def nBodyRungeKutta4(time, dt, x_i3, xdot_i3, m_i1):
     time += dt # s
 
     # update time-step
-    dt = timeStep( dx_i3, dv_i3 ) # s
+    # dt = timeStep( dx_i3, dv_i3 ) # s
 
     # output time, time-step, positions, and velocities
     return time, dt, x_i3, xdot_i3 # s, s, AU, km/s
@@ -576,6 +573,7 @@ def randomSpeed(maxSpeed_i1):
 #===============================================================================#
 
 def checkCollision(x_i3, r_i1):
+    warnings.filterwarnings('error')
 
     # find the pair-wise distance for each body
     x_ij = pairwiseDistance( x_i3 ) # AU
@@ -583,22 +581,23 @@ def checkCollision(x_i3, r_i1):
     # find the pair-wise sum of radii
     r_ij = r_i1 + r_i1.T # AU
     # convert diagonal to 0, since these pairs are not viable sim pairs
-    np.fill_diagonal( r_ij, 0 )
+    np.fill_diagonal(r_ij, 0)
 
     # determine any collitions
-    collisions = ( r_ij > x_ij ) # bool
-    collide = np.any( collisions ) # bool
+    collisions = (r_ij > x_ij) # bool
+    collide = np.any(collisions) # bool
     return collide
 
 def checkEjection(x_i3, xdot_i3, m_i1):
+    warnings.filterwarnings('error')
 
     # determine the escape velocity from the system for each body
-    vEscape_i1 = escapeSpeed( x_i3, m_i1 ) # km/s
+    vEscape_i1 = escapeSpeed(x_i3, m_i1) # km/s
 
     # calculate the speed of each body
-    speed_i1 = np.sqrt( ( xdot_i3**2 ).sum( axis=1, keepdims=True ) ) # km/s
+    speed_i1 = np.sqrt((xdot_i3**2).sum(axis=1, keepdims=True)) # km/s
 
     # determine any eminent ejections
-    ejections = ( speed_i1 > vEscape_i1 ) # km/s
-    eject = np.any( ejections ) # bool
+    ejections = (speed_i1 > vEscape_i1) # km/s
+    eject = np.any(ejections) # bool
     return eject
