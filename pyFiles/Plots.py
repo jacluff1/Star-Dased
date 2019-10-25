@@ -108,6 +108,9 @@ def scenarioAnimation( sampleRowIdx=0, timeIdx=0, **kwargs ):
     https://matplotlib.org/gallery/animation/subplots.html
     https://stackoverflow.com/a/29834816/6943976
     """
+
+    earlyStop = kwargs['earlyStop'] if 'earlyStop' in kwargs else False
+
     sim = Simulation()
 
     def data_gen():
@@ -120,13 +123,15 @@ def scenarioAnimation( sampleRowIdx=0, timeIdx=0, **kwargs ):
         valuesDict = sim.setupScenario(sampleRowIdx)
         dt = valuesDict['dt']
         maxT = inp.maxT
-        for _ in tqdm(range(10)):
+        time = 0
+        while time < maxT:
+        # for _ in tqdm(range(10)):
 
             valuesDict = sim.runScenario(valuesDict)
             collision = valuesDict['collide']
             ejection = valuesDict['eject']
             timeLimit = valuesDict['timeLimit']
-            if any([collision, ejection, timeLimit]): break
+            if earlyStop and any([collision, ejection, timeLimit]): break
 
             x_i3 = valuesDict['x_i3_t']
             m_i1 = valuesDict['m_i1']
@@ -180,8 +185,8 @@ def scenarioAnimation( sampleRowIdx=0, timeIdx=0, **kwargs ):
         # return line
         return line
 
-    ani = animation.FuncAnimation(fig, run, data_gen, blit=True, interval=100, repeat=False)
-    ani.save("figures/animation.mp4", writer='ffmpeg')
+    ani = animation.FuncAnimation(fig, run, data_gen, blit=True, interval=10, repeat=False)
+    ani.save(f"figures/animation_{sampleRowIdx}.mp4", writer='ffmpeg')
     # plt.show()
 
 #===============================================================================#
@@ -193,6 +198,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--sampleRowIdx', default=0)
     parser.add_argument('--timeIdx', default=0)
+    parser.add_argument('--earlyStop', default=False)
     parser.add_argument('--show', default=True)
     parser.add_argument('--positionPlot', default=False)
     parser.add_argument('--animation', default=False)
@@ -201,7 +207,7 @@ if __name__ == "__main__":
 
     # update key word arguments if presented
     for key in ['sampleRowIdx', 'timeIdx']: kwargs[key] = int(kwargs[key])
-    for key in ['show', 'positionPlot', 'animation']:
+    for key in ['earlyStop', 'show', 'positionPlot', 'animation']:
         if any([kwargs[key]=="false", kwargs[key]=='False', kwargs[key]=='0']):
             kwargs[key] = False
         elif any([kwargs[key]=='true', kwargs[key]=='True', kwargs[key]=='1']):

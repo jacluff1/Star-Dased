@@ -12,6 +12,7 @@ import Input as inp
 # import external dependencies                                                  #
 #===============================================================================#
 
+import argparse
 from copy import deepcopy
 import numpy as np
 import pandas as pd
@@ -69,39 +70,6 @@ class Simulation( BaseClass ):
     #===========================================================================#
     # public methods                                                            #
     #===========================================================================#
-
-    def run( self, *args, **kwargs ):
-        """
-        use:
-        This method runs through each treatment in sample_ and terminates when
-        __runTreatment() sets runComplete_ = True
-
-        ============================================================================
-        input:          type:           description:
-        ============================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ============================================================================
-        output:         type:
-        ============================================================================
-        None            None
-        """
-
-        while not self.runComplete_:
-            # run the treatement for current treatement, specified by
-            # sampleRowIdx
-            self._runScenario()
-            # increment sampleRowIdx
-            self.sampleRowIdx_ += 1
-            # evaluate run completion conditions, if the sample row index is
-            # greater than the number of rows in sample_
-            self.runComplete_ = ( self.sampleRowIdx_ == self.sample_.shape[ 0 ] )
-            # save current state of sim model
-            self.saveState()
-        self.sample_.to_csv( "data/Simulation.csv", index=False )
 
     def recordScenario( self, valuesDict ):
         vd = valuesDict
@@ -261,6 +229,8 @@ class Simulation( BaseClass ):
 
     def _runScenario( self, **kwargs ):
 
+        earlyStop = kwargs['earlyStop'] if 'earlyStop' in kwargs else False
+
         # set terminition conditions
         collide   = False
         eject     = False
@@ -269,12 +239,13 @@ class Simulation( BaseClass ):
         valuesDict = self.setupScenario( self.sampleRowIdx_ )
         dt   = valuesDict['dt']
         maxT = inp.maxT
-        for _ in tqdm( range( int(maxT//dt) ) ):
+        while not timeLimit:
+        # for _ in tqdm( range( int(maxT//dt) ) ):
             valuesDict  = self.runScenario( valuesDict )
             collision   = valuesDict['collide']
             ejection    = valuesDict['eject']
             timeLimit   = valuesDict['timeLimit']
-            if any([ collision, ejection, timeLimit ]): break
+            if earlyStop and any([ collision, ejection, timeLimit ]): break
         self.recordScenario( valuesDict )
 
     #===========================================================================#
@@ -323,5 +294,19 @@ class Simulation( BaseClass ):
 #===============================================================================#
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--earlyStop', default=False)
+    args = parser.parse_args()
+    kwargs = args.__dict__
+
+    # update key word arguments if presented
+    for key in []: kwargs[key] = int(kwargs[key])
+    for key in [earlyStop]:
+        if any([kwargs[key]=="false", kwargs[key]=='False', kwargs[key]=='0']):
+            kwargs[key] = False
+        elif any([kwargs[key]=='true', kwargs[key]=='True', kwargs[key]=='1']):
+            kwargs[key] = True
+
     sim = Simulation()
-    sim.run()
+    sim.run(**kwargs)

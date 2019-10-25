@@ -12,6 +12,7 @@ import pyFiles.Input as inp
 # import external dependencies                                                  #
 #===============================================================================#
 
+import itertools
 import numpy as np
 import pandas as pd
 import pdb
@@ -20,39 +21,30 @@ import pdb
 # Simulation definition                                                         #
 #===============================================================================#
 
-class MLbase( BaseClass ):
+class MLbase(BaseClass):
 
     #===========================================================================#
     # constructor                                                               #
     #===========================================================================#
 
-    def __init__( self, *args, **kwargs ):
-        """
-        use:
-        creates an instance of Simulation. defines a factor space based on
-        params defined in Input.py. If the sim has not been previously run, will
-        create an empty DataFrame to hold all the sim data.
-
-        ========================================================================
-        input:          type:           description:
-        ========================================================================
-        args:           type:           description:
-
-        kwargs:         type:           description:
-        verbose         bool            flag to print, default = False
-
-        ========================================================================
-        output:         type:
-        ========================================================================
-        None            None
-        """
+    def __init__(self, name, *args, **kwargs):
 
         # construct smaller set of kwargs used for construction
         kwargs1 = {}
         if 'verbose' in kwargs: kwargs1['verbose'] = kwargs['verbose']
 
         # run BaseClass constructor for Simulation instance
-        super().__init__( "MachineLearningBase", *args, **kwargs )
+        super().__init__(name, *args, **kwargs)
+
+        # set hyper-parameter map only if it doesn't exist yet
+        if not hasattr(self, 'parameterMap_'): self._getParameterMap(**kwargs)
+
+        # add DataFrame sim data if not present
+        if not hasattr(self, 'data_'):
+            if len(args) == 1:
+                self.data_ = args[0]
+            elif len(args) == 0:
+                raise AssertionError, "Need generated sim Data given in args!"
 
     #===========================================================================#
     # public methods                                                            #
@@ -60,22 +52,33 @@ class MLbase( BaseClass ):
 
     #===========================================================================#
     # puplic methods                                                            #
-    # required for BaseClass, implemented here                                  #
+    # required by BaseClass, implemented here                                   #
+    # OR                                                                        #
+    # required for MLbase, child needs to implement                             #
     #===========================================================================#
 
-    def run( self, *args, **kwargs ):
+    #===========================================================================#
+    # semi-protected methods                                                    #
+    #===========================================================================#
+
+    #===========================================================================#
+    # semi-protected methods                                                    #
+    # required by BaseClass, implented here                                     #
+    # OR                                                                        #
+    # required for MLbase, child needs to implement                             #
+    #===========================================================================#
+
+    def _getParameterMap(self, *args, **kwargs):
         NotImplemented
 
-    #===========================================================================#
-    # semi-protected methods                                                    #
-    #===========================================================================#
+    def _getSample(self, **kwargs):
+        self.sample_ = pd.DataFrame(
+            list(itertools(self.parameterMap_.values())),
+            columns = self.parameterMap_.keys()
+            )
+        for colName in self.colNames_['estimators']: self.sample_[colName] = np.nan
 
-    #===========================================================================#
-    # semi-protected methods                                                    #
-    # required for BaseClass, implemented here                                  #
-    #===========================================================================#
-
-    def _getSample( self, *args, **kwargs ):
+    def _runScenario(self, *args, **kwargs):
         NotImplemented
 
     #===========================================================================#
