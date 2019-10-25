@@ -26,7 +26,7 @@ class BaseClass:
     # constructor                                                               #
     #===========================================================================#
 
-    def __init__( self, name, *args, **kwargs ):
+    def __init__(self, name, *args, **kwargs):
         """
         use:
         instructions on how to perform basic construction for any class instance
@@ -57,23 +57,28 @@ class BaseClass:
 
         # take out any key word arguments which aren't desired as attributes
         kwargs1 = {}
-        if 'verbose' in kwargs: kwargs1['verbose'] = kwargs.pop( 'verbose' )
-        if 'addTail' in kwargs: kwargs1['addTail'] = kwargs.pop( 'addTail' )
+        if 'verbose' in kwargs: kwargs1['verbose'] = kwargs.pop('verbose')
+        if 'addTail' in kwargs: kwargs1['addTail'] = kwargs.pop('addTail')
 
         # look for any previously saved state and load it if it exists
-        self.loadState( **kwargs1 )
+        self.loadState(**kwargs1)
 
         # only generate metadata if it doesn't already exist
-        if not hasattr( self, 'factors_' ):
-            self._generateColumnNames( *args, **kwargs1 )
+        if not hasattr(self, 'factors_'):
+            self._generateColumnNames(*args, **kwargs1)
 
         # only generate a sample if it doesn't already exist
-        if not hasattr( self, 'sample_' ):
-            self._getSample( **kwargs1 )
+        if not hasattr(self, 'sample_'): self._getSample(**kwargs1)
+
+        # only set if not already present
+        if not hasattr(self, 'sampleRowIdx_'): self.sampleRowIdx_ = 0
+
+        # only set if not already present
+        if not hasattr(self, 'runComplete_'): self.runComplete_ = False
 
         # add any remaining kwargs as attributes, will override previous state
         # if any keys conflict
-        self._dict2attributes( kwargs, message="Overriding Attributes", **kwargs1 )
+        self._dict2attributes(kwargs, message="Overriding Attributes", **kwargs1)
 
     #===========================================================================#
     # public methods                                                            #
@@ -82,7 +87,7 @@ class BaseClass:
     # in the child class.                                                       #
     #===========================================================================#
 
-    def loadState( self, **kwargs ):
+    def loadState(self, **kwargs):
         """
         use:
         looks for previously saved state and loads it into instance attributes
@@ -104,7 +109,7 @@ class BaseClass:
         state = fun.fromPickle( f"data/{self.name_}.pkl", **kwargs )
         self._dict2attributes( state, message='Loading State:', **kwargs )
 
-    def saveState( self , **kwargs ):
+    def saveState(self, **kwargs):
         """
         use:
         saves the current state of the model instance into a pickle, which will
@@ -126,13 +131,24 @@ class BaseClass:
         """
         fun.toPickle( f"data/{self.name_}.pkl", self.__dict__, **kwargs )
 
+    def run(self, *args, **kwargs):
+        while not self.runComplete_:
+            # run the treatement for current treatement, specified by
+            # sampleRowIdx
+            self._runScenario(**kwargs)
+            # increment sampleRowIdx
+            self.sampleRowIdx_ += 1
+            # evaluate run completion conditions, if the sample row index is
+            # greater than the number of rows in sample_
+            self.runComplete_ = (self.sampleRowIdx_ == self.sample_.shape[0])
+            # save current state of sim model
+            self.saveState()
+        self.sample_.to_csv(f"data/{self.name_}.csv", index=False)
+
     #===========================================================================#
     # public methods                                                            #
     # any methods defined here need to be implemnted in the child class         #
     #===========================================================================#
-
-    def run( self, *args, **kwargs ):
-        NotImplemented
 
     #===========================================================================#
     # semi-protected methods                                                    #
@@ -141,7 +157,7 @@ class BaseClass:
     # in the child class.                                                       #
     #===========================================================================#
 
-    def _dict2attributes( self, dictionary, **kwargs ):
+    def _dict2attributes(self, dictionary, **kwargs):
         """
         use:
         saves every item in dictionary as an attribute
@@ -170,7 +186,7 @@ class BaseClass:
                 else:
                     setattr( self, key, value )
 
-    def _generateColumnNames( self, *args, **kwargs ):
+    def _generateColumnNames(self, *args, **kwargs):
         """
         use:
         adds list of all columns, factor space columns, estimator columns,
@@ -234,6 +250,9 @@ class BaseClass:
     # semi-protected                                                            #
     # any methods defined here need to be implemnted in the child class         #
     #===========================================================================#
+
+    def _runScenario(self, *args, **kwargs):
+        NotImplemented
 
     #===========================================================================#
     # semi-private methods                                                      #

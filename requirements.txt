@@ -1,8 +1,9 @@
 pip
 ipython
+ipdb
+matplotlib
 numpy
 pandas
 scipy
-matplotlib
 sklearn
 tqdm

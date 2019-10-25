@@ -48,7 +48,7 @@ kyr2s = yr2s * 1e3
 G = 6.67408e-11 * m2km**2 * m2au / kg2solar
 
 #===============================================================================#
-# parameters                                                                    #
+# simulation parameters                                                         #
 #===============================================================================#
 
 # constant factors
@@ -116,3 +116,13 @@ sampleFileColumnMap = {
 }
 # sample file drop columns
 sampleFileDropColumns = [ 'N/A' ]
+
+#===============================================================================#
+# random forest classifier parameters                                           #
+#===============================================================================#
+
+RFclassifierParameterMap = {
+    'n_estimators' = [1, 10, 20, 50, 100, 200, 5000],
+    'max_depth' = [None] + [x for x in range(10)],
+    'min_samples_leaf' = [x for x in range(10)]
+}
