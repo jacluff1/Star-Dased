@@ -187,7 +187,6 @@ def scenarioAnimation( sampleRowIdx=0, timeIdx=0, **kwargs ):
 
     ani = animation.FuncAnimation(fig, run, data_gen, blit=True, interval=10, repeat=False)
     ani.save(f"figures/animation_{sampleRowIdx}.mp4", writer='ffmpeg')
-    # plt.show()
 
 #===============================================================================#
 # main                                                                          #

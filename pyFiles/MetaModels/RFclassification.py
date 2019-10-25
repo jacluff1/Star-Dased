@@ -3,17 +3,20 @@
 # import internal dependencies                                                  #
 #===============================================================================#
 
+from pyFiles.BaseClass import BaseClass
 from pyFiles.MetaModels.MLbase import MLbase
 
 #===============================================================================#
 # import external dependencies                                                  #
 #===============================================================================#
 
+from sklearn.ensemble import RandomForestClassifier
+
 #===============================================================================#
 # Simulation definition                                                         #
 #===============================================================================#
 
-class RandomForests(MLbase):
+class RandomForests(BaseClass, MLbase):
 
     #===========================================================================#
     # constructor                                                               #
@@ -31,6 +34,21 @@ class RandomForests(MLbase):
     # required by MLbase OR BaseClass                                           #
     #===========================================================================#
 
+    def fit(self):
+        # fit with training data only
+        self.model_.fit()
+
+    def predict(self):
+
+        # make predictions for all DF in data
+
+        predictions = {
+            'train': NotImplemented,
+            'validate': NotImplemented,
+            'test': NotImplemented,
+        }
+        return predictions
+
     #===========================================================================#
     # semp-protected methods                                                    #
     #===========================================================================#
@@ -41,18 +59,54 @@ class RandomForests(MLbase):
     #===========================================================================#
 
     def _getParameterMap(self, **kwargs):
+        self.parameterMap_ = inp.RFclassifierParameterMap
+
+    def _makeModel(self, **kwargs):
         """
-        n_estimators=’warn’, criterion=’gini’, max_depth=None, min_samples_split=2, min_samples_leaf=1, min_weight_fraction_leaf=0.0, max_features=’auto’, max_leaf_nodes=None, min_impurity_decrease=0.0, min_impurity_split=None, bootstrap=True, oob_score=False, n_jobs=None, random_state=None, verbose=0, warm_start=False, class_weight=None
+        https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
         """
-        self.parameterMap_ = {
-            'n_estimators' = [1, 10, 20, 50, 100, 200, 5000],
-            'max_depth' = [None] + [x for x in range(10)],
-            'min_samples_leaf' = [x for x in range(3)]
-        }
+        self.model_ = RandomForestClassifier(**kwargs)
 
     def _runScenario(self):
-        NotImplemented
+
+        # get hyper-parameters from sample
+        sampleRow = self.sample_.iloc[self.sampleRowIdx_]
+
+        # extract model kwargs from sample row
+        kwargs = {key:sampleRow[key] for key in self.parameterMap_.keys()}
+
+        # construct model
+        self._makeModel(**kwargs)
+
+        # train model with training data
+        self.fit()
+
+        # make predicitons on all data sets
+        predictions = self.predict()
+
+        # calculate the accuracies, precision, and recall
+        accuracy = self._performanceAccuracy(predictions)
+        precision = self._performancePrecision(predictions)
+        recall = self._performanceRecall(predictions)
+
+        # record accuracy (and another other desired metric) for both train and
+        # validate sets
+        for metricName, metricDict in zip(['accuracy', 'precision', 'recall'], [accuracy, precision, recall]):
+            for cvIdx, key in enumerate(['train', 'validate', 'test']):
+                colName = f"{metricName}_({cvIdx})"
+                self.sample_.loc[self.sampleRowIdx_, colName] = metricDict[key]
 
     #===========================================================================#
     # semi-private methods                                                      #
     #===========================================================================#
+
+#===============================================================================#
+# main                                                                          #
+#===============================================================================#
+
+if __name__ == "__main__":
+
+    # add argparser
+
+    RFc = RandomForestClassifier()
+    RFc.run()

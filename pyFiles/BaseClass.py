@@ -73,6 +73,9 @@ class BaseClass:
         # only set if not already present
         if not hasattr(self, 'sampleRowIdx_'): self.sampleRowIdx_ = 0
 
+        # only set if not already present
+        if not hasattr(self, 'runComplete_'): self.runComplete_ = False
+
         # add any remaining kwargs as attributes, will override previous state
         # if any keys conflict
         self._dict2attributes(kwargs, message="Overriding Attributes", **kwargs1)
@@ -140,7 +143,7 @@ class BaseClass:
             self.runComplete_ = (self.sampleRowIdx_ == self.sample_.shape[0])
             # save current state of sim model
             self.saveState()
-            self.sample_.to_csv(f"data/{self.name_}.csv", index=False)
+        self.sample_.to_csv(f"data/{self.name_}.csv", index=False)
 
     #===========================================================================#
     # public methods                                                            #

@@ -40,11 +40,7 @@ class MLbase(BaseClass):
         if not hasattr(self, 'parameterMap_'): self._getParameterMap(**kwargs)
 
         # add DataFrame sim data if not present
-        if not hasattr(self, 'data_'):
-            if len(args) == 1:
-                self.data_ = args[0]
-            elif len(args) == 0:
-                raise AssertionError, "Need generated sim Data given in args!"
+        if not hasattr(self, 'data_'): self._splitData()
 
     #===========================================================================#
     # public methods                                                            #
@@ -57,9 +53,36 @@ class MLbase(BaseClass):
     # required for MLbase, child needs to implement                             #
     #===========================================================================#
 
+    def fit(self, *args, **kwargs):
+        NotImplemented
+
+    def predict(self, *args, **kwargs):
+        NotImplemented
+
     #===========================================================================#
     # semi-protected methods                                                    #
     #===========================================================================#
+
+    def _performanceAccuracy(self, predictions):
+        NotImplemented
+
+    def _performancePrecision(self, predictions):
+        NotImplemented
+
+    def _performanceRecall(self, predictions):
+        NotImplemented
+
+    def _splitData(self, DF):
+
+        # load generated sim data
+
+        # split data
+
+        self.data_ = {
+            'train': NotImplemented,
+            'validate': NotImplemented,
+            'test': NotImplemented,
+        }
 
     #===========================================================================#
     # semi-protected methods                                                    #
@@ -75,13 +98,24 @@ class MLbase(BaseClass):
         self.sample_ = pd.DataFrame(
             list(itertools(self.parameterMap_.values())),
             columns = self.parameterMap_.keys()
-            )
-        for colName in self.colNames_['estimators']: self.sample_[colName] = np.nan
+        )
+        # add columns to track model performance for train, validate, test
+        metricCols = []
+        for metric in ['accuracy', 'recall', 'precision']:
+            for cvIdx in range(3):
+                colName = f"{metric}_({cvIdx})"
+                metricCols.append(colName)
+                self.sample_[colName] = np.nan
+        # add metric columns to column dictionary
+        self.colNames_['metrics'] = metricCols
+        self.colNames_['all'] += metricCols
+
+    def _makeModel(self, *args, **kwargs):
+        NotImplemented
 
     def _runScenario(self, *args, **kwargs):
         NotImplemented
 
     #===========================================================================#
     # semi-private                                                              #
-    # sampling                                                                  #
     #===========================================================================#

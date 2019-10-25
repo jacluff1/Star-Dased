@@ -407,6 +407,47 @@ def timeStep(dx_i3, dv_i3, **kwargs):
     return delta_t # s
 
 #===============================================================================#
+# meta model auxillary Functions                                                #
+#===============================================================================#
+
+def oneHotEncodeY(y):
+    K = len(set(y))
+    Y = np.zeros((y.shape[0],K))
+    for idx,val in enumerate(y):
+        Y[idx,val] = 1
+    return Y
+
+def softmax(H):
+    eH = np.exp(H)
+    return eH / eH.sum(axis=1, keepdims=True)
+
+def shuffle(*args, **kwargs):
+    seed = kwargs['seed'] if 'seed' in kwargs else 0
+    idx = np.random.RandomState(seed=seed).permutation(len(args[0]))
+    return [X[idx] for X in args]
+
+#===============================================================================#
+# meta model metrics                                                            #
+#===============================================================================#
+
+def accuracy(Y, Yhat):
+    # works for both Yhat and Phat, but all values have to be N by K
+    return np.mean(Y.argmax(axis=1) == Yhat.argmax(axis=1))
+
+def confusionMatrix(Y, Yhat):
+    Y_hat = oneHotEncode(Phat.argmax(axis=1))
+    return Y.T @ Y_hat
+
+def recall(Y, Yhat):
+    NotImplemented
+
+def ROC_AUC(Y, Yhat):
+    NotImplemented
+
+def precision(Y, Yhat):
+    NotImplemented
+
+#===============================================================================#
 # printing                                                                      #
 #===============================================================================#
 
