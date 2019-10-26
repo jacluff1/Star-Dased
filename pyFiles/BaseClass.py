@@ -131,7 +131,7 @@ class BaseClass:
         """
         fun.toPickle( f"data/{self.name_}.pkl", self.__dict__, **kwargs )
 
-    def run(self, *args, **kwargs):
+    def run(self, **kwargs):
         while not self.runComplete_:
             # run the treatement for current treatement, specified by
             # sampleRowIdx

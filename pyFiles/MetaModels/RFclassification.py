@@ -58,25 +58,22 @@ class RandomForests(BaseClass, MLbase):
     # required by MLbase OR BaseClass                                           #
     #===========================================================================#
 
-    def _getParameterMap(self, **kwargs):
-        self.parameterMap_ = inp.RFclassifierParameterMap
-
-    def _makeModel(self, **kwargs):
+    def _buildModel(self, **kwargs):
         """
         https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
         """
         self.model_ = RandomForestClassifier(**kwargs)
 
+    def _getParameterMap(self, **kwargs):
+        self.parameterMap_ = inp.RFclassifierParameterMap
+
     def _runScenario(self):
 
-        # get hyper-parameters from sample
-        sampleRow = self.sample_.iloc[self.sampleRowIdx_]
-
-        # extract model kwargs from sample row
-        kwargs = {key:sampleRow[key] for key in self.parameterMap_.keys()}
+        # model hyperpareters from sample
+        params = self._findModelParams(self.sampleRowIdx_)
 
         # construct model
-        self._makeModel(**kwargs)
+        self._buildModel(**params)
 
         # train model with training data
         self.fit()
