@@ -36,18 +36,13 @@ class RandomForests(BaseClass, MLbase):
 
     def fit(self):
         # fit with training data only
-        self.model_.fit()
+        self.model_.fit(self.data_['train'].X(), self.data_['train'].Y())
 
     def predict(self):
-
-        # make predictions for all DF in data
-
-        predictions = {
-            'train': NotImplemented,
-            'validate': NotImplemented,
-            'test': NotImplemented,
-        }
-        return predictions
+        for key in ['train', 'validate', 'test']:
+            X = self.data_[key].X()
+            Yhat = self.model_.predict(X)
+            self.data_[key].updateYhat(Yhat)
 
     #===========================================================================#
     # semp-protected methods                                                    #
@@ -58,36 +53,38 @@ class RandomForests(BaseClass, MLbase):
     # required by MLbase OR BaseClass                                           #
     #===========================================================================#
 
-    def _getParameterMap(self, **kwargs):
-        self.parameterMap_ = inp.RFclassifierParameterMap
-
-    def _makeModel(self, **kwargs):
+    def _buildModel(self, **kwargs):
         """
         https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
         """
         self.model_ = RandomForestClassifier(**kwargs)
 
-    def _runScenario(self):
+    def _getParameterMap(self, **kwargs):
+        self.parameterMap_ = inp.RFclassifierParameterMap
 
-        # get hyper-parameters from sample
-        sampleRow = self.sample_.iloc[self.sampleRowIdx_]
+    def _runScenario(self, *args):
 
-        # extract model kwargs from sample row
-        kwargs = {key:sampleRow[key] for key in self.parameterMap_.keys()}
+        if len(args) == 0:
+            sampleRowIdx = self.sampleRowIdx_
+        if len(args) == 1:
+            sampleRowIdx = args[0]
+
+        # model hyperpareters from sample
+        params = self._findModelParams(sampleRowIdx)
 
         # construct model
-        self._makeModel(**kwargs)
+        self._buildModel(**params)
 
         # train model with training data
         self.fit()
 
         # make predicitons on all data sets
-        predictions = self.predict()
+        self.predict()
 
         # calculate the accuracies, precision, and recall
-        accuracy = self._performanceAccuracy(predictions)
-        precision = self._performancePrecision(predictions)
-        recall = self._performanceRecall(predictions)
+        accuracy = self.performanceAccuracy()
+        precision = self.performancePrecision()
+        recall = self.performanceRecall()
 
         # record accuracy (and another other desired metric) for both train and
         # validate sets

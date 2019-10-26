@@ -46,6 +46,37 @@ class MLbase(BaseClass):
     # public methods                                                            #
     #===========================================================================#
 
+    def run(self, **kwargs):
+        # use run from baseclass
+        super().run(**kwargs)
+        # once basic run is complete, find the best model from sample and build
+        # it
+        self._buildBestModel(**kwargs)
+
+    def performanceAccuracy(self):
+        results = {}
+        for key in ['train', 'validate', 'test']:
+            Y = self.data_[key].Y()
+            Yhat = self.data_[key].Yhat()
+            results[key] = fun.accuracy(Y, Yhat)
+        return results
+
+    def performancePrecision(self):
+        results = {}
+        for key in ['train', 'validate', 'test']:
+            Y = self.data_[key].Y()
+            Yhat = self.data_[key].Yhat()
+            results[key] = fun.precision(Y, Yhat)
+        return results
+
+    def performanceRecall(self):
+        results = {}
+        for key in ['train', 'validate', 'test']:
+            Y = self.data_[key].Y()
+            Yhat = self.data_[key].Yhat()
+            results[key] = fun.recall(Y, Yhat)
+        return results
+
     #===========================================================================#
     # puplic methods                                                            #
     # required by BaseClass, implemented here                                   #
@@ -63,14 +94,27 @@ class MLbase(BaseClass):
     # semi-protected methods                                                    #
     #===========================================================================#
 
-    def _performanceAccuracy(self, predictions):
-        NotImplemented
+    def _buildBestModel(self, *args, **kwargs):
+        # set variables by key word arguments
+        metric = kwargs['metric'] if 'metric' in kwargs else 'accuracy'
+        # find validate metric column
+        metric += "_(1)"
+        # find a filtered view of sample that has best validate metric
+        df = self.sample_[self.sample_[metric] == self.sample_[metric].max()]
+        # make sure df only has one result
+        assert df.shape[0] == 1, f"it seems {metric} has multiple best results"
+        # get the sample row index that hold best model hyperpareters
+        sampleRowIdx = df.index[0]
+        # re-run the best scenario to update all relevant data
+        self._runScenario(sampleRowIdx, **kwargs)
 
-    def _performancePrecision(self, predictions):
-        NotImplemented
-
-    def _performanceRecall(self, predictions):
-        NotImplemented
+    def _findModelParams(self, sampleRowIdx):
+        # get the row from the sample DF
+        sampleRow = self.sample_.iloc[sampleRowIdx]
+        # find model hyperparameters
+        params = {key:sampleRow[key] for key in self.parameterMap_.keys()}
+        # return model hyperparameters
+        return params
 
     def _splitData(self, DF):
 
@@ -91,6 +135,9 @@ class MLbase(BaseClass):
     # required for MLbase, child needs to implement                             #
     #===========================================================================#
 
+    def _buildModel(self, *args, **kwargs):
+        NotImplemented
+
     def _getParameterMap(self, *args, **kwargs):
         NotImplemented
 
@@ -109,9 +156,6 @@ class MLbase(BaseClass):
         # add metric columns to column dictionary
         self.colNames_['metrics'] = metricCols
         self.colNames_['all'] += metricCols
-
-    def _makeModel(self, *args, **kwargs):
-        NotImplemented
 
     def _runScenario(self, *args, **kwargs):
         NotImplemented

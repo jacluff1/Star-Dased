@@ -431,21 +431,62 @@ def shuffle(*args, **kwargs):
 #===============================================================================#
 
 def accuracy(Y, Yhat):
+    """
+    (number predicted correctly) / (total number). outputs scalar
+    """
     # works for both Yhat and Phat, but all values have to be N by K
     return np.mean(Y.argmax(axis=1) == Yhat.argmax(axis=1))
 
-def confusionMatrix(Y, Yhat):
-    Y_hat = oneHotEncode(Phat.argmax(axis=1))
-    return Y.T @ Y_hat
+def confusionMatrix(Y, Yhat, **kwargs):
+    """
+    matrix of actual vs predicted. outputs a (K,K) array.
+    """
+    normalized = kwargs['normalized'] if 'normalized' in kwargs else True
+    CM = Y.T @ Yhat
+    if normalized: CM /= CM.sum()
+    return CM
+
+def falseNegative(Y, Yhat):
+    """
+    find counts where prediction and actual are different and where prediction
+    is negative. outputs (1,K) array.
+    """
+    return ((Yhat == 0) & (Yhat != Y)).sum(axis=0)
+
+def falsePositive(Y, Yhat):
+    """
+    find counts where prediction and actual are different and where prediciton
+    is positive. outputs (1,K) array.
+    """
+    return ((Yhat == 1) & (Yhat != Y)).sum(axis=0)
 
 def recall(Y, Yhat):
-    NotImplemented
+    """
+    (number of true positives) / (total number actually positive). outputs (1,K)
+    array.
+    """
+    TP = truePositive(Y, Yhat)
+    FN = falseNegative(Y, Yhat)
+    return TP / (TP + FN)
 
 def ROC_AUC(Y, Yhat):
     NotImplemented
 
 def precision(Y, Yhat):
-    NotImplemented
+    """
+    (number of true positives) / (total number predicted positive). outputs
+    (1,K) array.
+    """
+    TP = truePositive(Y, Yhat)
+    FP = falsePositive(Y, Yhat)
+    return TP / (TP + FP)
+
+def truePositive(Y, Yhat):
+    """
+    find a count where predicted and actual are the same and where prediction is
+    True. outputs a (1,K) array
+    """
+    return ((Yhat == Y) & (Yhat==1)).sum(axis=0)
 
 #===============================================================================#
 # printing                                                                      #
