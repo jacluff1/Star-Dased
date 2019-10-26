@@ -53,6 +53,30 @@ class MLbase(BaseClass):
         # it
         self._buildBestModel(**kwargs)
 
+    def performanceAccuracy(self):
+        results = {}
+        for key in ['train', 'validate', 'test']:
+            Y = self.data_[key].Y()
+            Yhat = self.data_[key].Yhat()
+            results[key] = fun.accuracy(Y, Yhat)
+        return results
+
+    def performancePrecision(self):
+        results = {}
+        for key in ['train', 'validate', 'test']:
+            Y = self.data_[key].Y()
+            Yhat = self.data_[key].Yhat()
+            results[key] = fun.precision(Y, Yhat)
+        return results
+
+    def performanceRecall(self):
+        results = {}
+        for key in ['train', 'validate', 'test']:
+            Y = self.data_[key].Y()
+            Yhat = self.data_[key].Yhat()
+            results[key] = fun.recall(Y, Yhat)
+        return results
+
     #===========================================================================#
     # puplic methods                                                            #
     # required by BaseClass, implemented here                                   #
@@ -81,10 +105,8 @@ class MLbase(BaseClass):
         assert df.shape[0] == 1, f"it seems {metric} has multiple best results"
         # get the sample row index that hold best model hyperpareters
         sampleRowIdx = df.index[0]
-        # find best model hyperpareters
-        params = self._findModelParams(sampleRowIdx)
-        # build best model
-        self._makeModel(*args, **kwargs)
+        # re-run the best scenario to update all relevant data
+        self._runScenario(sampleRowIdx, **kwargs)
 
     def _findModelParams(self, sampleRowIdx):
         # get the row from the sample DF
@@ -93,15 +115,6 @@ class MLbase(BaseClass):
         params = {key:sampleRow[key] for key in self.parameterMap_.keys()}
         # return model hyperparameters
         return params
-
-    def _performanceAccuracy(self, predictions):
-        NotImplemented
-
-    def _performancePrecision(self, predictions):
-        NotImplemented
-
-    def _performanceRecall(self, predictions):
-        NotImplemented
 
     def _splitData(self, DF):
 

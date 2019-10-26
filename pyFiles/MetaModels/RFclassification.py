@@ -36,18 +36,13 @@ class RandomForests(BaseClass, MLbase):
 
     def fit(self):
         # fit with training data only
-        self.model_.fit()
+        self.model_.fit(self.data_['train'].X(), self.data_['train'].Y())
 
     def predict(self):
-
-        # make predictions for all DF in data
-
-        predictions = {
-            'train': NotImplemented,
-            'validate': NotImplemented,
-            'test': NotImplemented,
-        }
-        return predictions
+        for key in ['train', 'validate', 'test']:
+            X = self.data_[key].X()
+            Yhat = self.model_.predict(X)
+            self.data_[key].updateYhat(Yhat)
 
     #===========================================================================#
     # semp-protected methods                                                    #
@@ -67,10 +62,15 @@ class RandomForests(BaseClass, MLbase):
     def _getParameterMap(self, **kwargs):
         self.parameterMap_ = inp.RFclassifierParameterMap
 
-    def _runScenario(self):
+    def _runScenario(self, *args):
+
+        if len(args) == 0:
+            sampleRowIdx = self.sampleRowIdx_
+        if len(args) == 1:
+            sampleRowIdx = args[0]
 
         # model hyperpareters from sample
-        params = self._findModelParams(self.sampleRowIdx_)
+        params = self._findModelParams(sampleRowIdx)
 
         # construct model
         self._buildModel(**params)
@@ -79,12 +79,12 @@ class RandomForests(BaseClass, MLbase):
         self.fit()
 
         # make predicitons on all data sets
-        predictions = self.predict()
+        self.predict()
 
         # calculate the accuracies, precision, and recall
-        accuracy = self._performanceAccuracy(predictions)
-        precision = self._performancePrecision(predictions)
-        recall = self._performanceRecall(predictions)
+        accuracy = self.performanceAccuracy()
+        precision = self.performancePrecision()
+        recall = self.performanceRecall()
 
         # record accuracy (and another other desired metric) for both train and
         # validate sets
