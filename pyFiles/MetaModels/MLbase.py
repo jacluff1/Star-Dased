@@ -3,8 +3,11 @@
 # import internal dependencies                                                  #
 #===============================================================================#
 
+# import class definitions
 from pyFiles.BaseClass import BaseClass
+from pyFiles.MetaModels.DataSet import DataSet
 
+# import modules
 import pyFiles.Functions as fun
 import pyFiles.Input as inp
 
@@ -116,17 +119,44 @@ class MLbase(BaseClass):
         # return model hyperparameters
         return params
 
-    def _splitData(self, DF):
+    def _splitData(self, DF, **kwargs):
+
+        # set variables by key word arguments
+        trainP = kwargs['trainP'] if 'trainP' in kwargs else 0.6
+        valP = kwargs['valP'] if 'valP' in kwargs else 0.2
+        seed = kwargs['seed'] if 'seed' in kwargs else 0
+
+        # collect percentages of how data will be split
+        splitPercentage = {'train':trainP, 'validate':valP, 'test':1-trainP-valP}
 
         # load generated sim data
+        df = pd.read_csv("data/Simulation.csv")
 
-        # split data
+        # collect the row indicies where the outcome is different
+        idxEst = {key:df[df.colName==1].index.values for colName in self.colNames_['estimators']}
 
-        self.data_ = {
-            'train': NotImplemented,
-            'validate': NotImplemented,
-            'test': NotImplemented,
-        }
+        # shuffle all the indicies
+        for idx in idxEst.values(): np.random.shuffle(idx, seed=seed)
+
+        # collect the number of rows associtated with each estimator outcome
+        nEst = {key:val.size for key,val in idxEst.items()}
+
+        # create empty containers to hold index arrays associated with each dataset
+        idxDs = {key:[] for key in ['train', 'validate', 'test']}
+
+        for colName in self.colNames_['estimators']:
+            # get the number from each estimator being divyied up between datasets
+            Nds = {key:int(Nest[colName]*splitPercentage[dsName]) for dsName in ['train', 'validate', 'test']}
+            # slice index arrays from estimates and add them to idxDs collection
+            idxDs['train'] = idxEst[colName][:Nds['train']]
+            idxDs['validate'] = idxEst[colName][Nds['train']:Nds['train']+Nds['validate']]
+            idx['test'] = idxEst[Nds['train']+Nds['validate']:]
+
+        # merge list of index arrays for each dataset into single array of indices
+        for dsName,idxList in idxDs.items(): idxDs[dsName] = np.hstack(idxList)
+
+        # add dictionary of split data
+        self.data_ = {dsName:DataSet(df.iloc[idx]) for dsName,idx in idxDs.items()}
 
     #===========================================================================#
     # semi-protected methods                                                    #

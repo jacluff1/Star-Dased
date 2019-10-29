@@ -211,7 +211,7 @@ class BaseClass:
         if len( args ) > 0:
             estimators = list( args )
         else:
-            estimators = [ 'runTime', 'collide', 'eject', 'survive' ]
+            estimators = [ 'collide', 'eject', 'survive' ]
 
         # define monte carlo columns
         mc = [ 'treatmentN', 'monteCarloN' ]
@@ -226,7 +226,7 @@ class BaseClass:
         random = inp.randomFactors
 
         # create an empty list to hold misc sim values and final values
-        sim = [ 'nSteps' ]
+        sim = [ 'nSteps', 'runTime' ]
         # fill in the columns for final sim values
         for starIdx in range(3):
             for coordinateIdx in range(3):
