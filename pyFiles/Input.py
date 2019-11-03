@@ -35,8 +35,12 @@ ly2au = 63241.1
 # kilogram to solar mass
 kg2solar = 5.02785e-31
 
+# days to seconds
+day2s = 60 * 60 * 24
+# month to seconds
+month2s = day2s * (365.25/12)
 # year to seconds
-yr2s = 60 * 60 * 24 * 365.25
+yr2s = day2s * 365.25
 # 1000 years to seconds
 kyr2s = yr2s * 1e3
 
@@ -69,9 +73,9 @@ constantFactors = {
 # control factors
 # (starIdx, coordinateIdx, timeIdx)
 controlFactors = {
-    'pos_(0,0,0)'   : ( 20, 200 ), # star 1 initial radial position limits (AU)
-    'pos_(1,0,0)'   : ( 20, 200 ), # star 2 initial radial position limits (AU)
-    'pos_(2,0,0)'   : ( 20, 200 ), # star 3 initial radial position limits (AU)
+    'pos_(0,0,0)'   : ( 20, 1000 ), # star 1 initial radial position limits (AU)
+    'pos_(1,0,0)'   : ( 20, 1000 ), # star 2 initial radial position limits (AU)
+    'pos_(2,0,0)'   : ( 20, 1000 ), # star 3 initial radial position limits (AU)
     'pos_(2,1,0)'   : ( 0.0, np.pi/2 ), # star 3 initial polar pos angle limits (radians)
     'mass_(0)'      : ( 0.08, 50 ), # star 1 mass limits (solar mass)
     'mass_(1)'      : ( 0.08, 50 ), # star 2 mass limits (solar mass)
@@ -93,9 +97,11 @@ randomFactorParams = (
 
 # max run time ( s )
 maxT = 10 * kyr2s
-
 # initial time-step scale factor
 dt0ScaleFactor = 1e-3
+# initial time delta
+# dt0 = month2s
+dt0 = yr2s/2
 
 # sample file name
 sampleFileName = "data/CUR_3Body_in.csv"
@@ -122,7 +128,7 @@ sampleFileDropColumns = [ 'N/A' ]
 #===============================================================================#
 
 RFclassifierParameterMap = {
-    'n_estimators' = [1, 10, 20, 50, 100, 200, 5000],
-    'max_depth' = [None] + [x for x in range(10)],
-    'min_samples_leaf' = [x for x in range(10)]
+    'n_estimators' : [1, 10, 20, 50, 100, 200, 5000],
+    'max_depth' : [None] + [x for x in range(10)],
+    'min_samples_leaf' : [x for x in range(10)]
 }
