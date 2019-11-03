@@ -110,7 +110,7 @@ class Simulation( BaseClass ):
         for colName, value in results.items():
             self.sample_.loc[ self.sampleRowIdx_, colName ] = value
 
-    def runScenario( self, valuesDict ):
+    def runScenario( self, valuesDict, **kwargs):
         vd = valuesDict
 
         # update time, time step, positions, and velocities
@@ -120,7 +120,7 @@ class Simulation( BaseClass ):
         vd['collide'] = fun.checkCollision( vd['x_i3_t'], vd['r_i1'] )
 
         # see if any stars are moving to fast
-        vd['eject'] = fun.checkEjection( vd['x_i3_t'], vd['xdot_i3_t'], vd['m_i1'] )
+        vd['eject'] = fun.checkEjection( vd['x_i3_t'], vd['xdot_i3_t'], vd['m_i1'], **kwargs)
 
         # see if timit limit has been exceeded
         vd['timeLimit'] = ( vd['time'] >= inp.maxT )
@@ -135,7 +135,7 @@ class Simulation( BaseClass ):
         # return the updated values dictionary
         return vd
 
-    def setupScenario( self, sampleRowIdx ):
+    def setupScenario( self, sampleRowIdx, **kwargs ):
 
         # scenario number
         n1 = sampleRowIdx + 1
@@ -153,49 +153,49 @@ class Simulation( BaseClass ):
                 if colName in inp.constantFactors:
                     spc_i3[ starIdx, coordinateIdx ] = inp.constantFactors[ colName ]
                 elif colName in sampleRow:
-                    spc_i3[ starIdx, coordinateIdx ] = sampleRow[ colName ]
+                    spc_i3[ starIdx, coordinateIdx ] = sampleRow[colName]
                 else:
                     pdb.set_trace()
-                    self.__columnAssertion( colName )
-                self.sample_.loc[ sampleRowIdx, colName ] = spc_i3[ starIdx, coordinateIdx ]
+                    self.__columnAssertion(colName)
+                self.sample_.loc[sampleRowIdx, colName] = spc_i3[starIdx, coordinateIdx]
 
         # construct masses
-        m_i1 = np.zeros( (3,1) ) # solar mass
+        m_i1 = np.zeros((3,1)) # solar mass
         for starIdx in range(3):
             colName = f"mass_({starIdx})"
             if colName in inp.constantFactors:
-                m_i1[ starIdx, 0 ] = inp.constantFactors[ colName ]
+                m_i1[starIdx, 0] = inp.constantFactors[colName]
             elif colName in sampleRow:
-                m_i1[ starIdx, 0 ] = sampleRow[ colName ]
+                m_i1[starIdx, 0] = sampleRow[colName]
             else:
-                self.__columnAssertion( colName )
+                self.__columnAssertion(colName)
 
         # calculate XYZ positions
-        x_i3 = fun.spc2xyz( spc_i3 ) # AU
+        x_i3 = fun.spc2xyz(spc_i3) # AU
 
         # calculate CM of the new system ( vector from current origin to CM )
-        CM_13 = fun.findCM( x_i3, m_i1 ) # AU
+        CM_13 = fun.findCM(x_i3, m_i1) # AU
 
         # make CM the new origin ( subtract CM vector from star positions )
         x_i3 -= CM_13 # AU
 
         # calculate escape velocity from system
-        escapeSpeed_i1 = fun.escapeSpeed( x_i3, m_i1 ) # km/s
+        escapeSpeed_i1 = fun.escapeSpeed(x_i3, m_i1) # km/s
 
         # construct spc initial velocity vectors
-        spcdot_i3 = np.zeros( (3,3) ) # (km/s, radian, radian)
+        spcdot_i3 = np.zeros((3,3)) # (km/s, radian, radian)
         # assign random speed
-        spcdot_i3[ : , 0 ] = fun.randomSpeed( escapeSpeed_i1 )[:,0] # (km/s, radian, radian)
+        spcdot_i3[ : , 0 ] = fun.randomSpeed(escapeSpeed_i1)[:,0] # (km/s, radian, radian)
         # assign angles
         for starIdx in range(3):
-            for coordinateIdx in [ 1, 2 ]:
+            for coordinateIdx in [1, 2]:
                 colName = f"vel_({starIdx},{coordinateIdx},0)"
                 if colName in inp.constantFactors:
-                    spcdot_i3[ starIdx, coordinateIdx ] = inp.constantFactors[ colName ]
+                    spcdot_i3[starIdx, coordinateIdx] = inp.constantFactors[colName]
                 elif colName in sampleRow:
-                    spcdot_i3[ starIdx, coordinateIdx ] = sampleRow[ colName ]
+                    spcdot_i3[starIdx, coordinateIdx] = sampleRow[colName]
                 else:
-                    self.__columnAssertion( colName )
+                    self.__columnAssertion(colName)
 
         # calculate XYZ velocities
         xdot_i3 = fun.spc2xyz( spcdot_i3 ) # km/s
@@ -213,7 +213,7 @@ class Simulation( BaseClass ):
         # initialize time step using smallest quotent of distance & initial
         # speed
         # dt = fun.timeStep( x_i3, xdot_i3, initial=True, scale=inp.dt0ScaleFactor )
-        dt = inp.yr2s / 2
+        dt = inp.dt0
 
         # return all the locally defined variables as dictionary
         return locals()
@@ -239,13 +239,17 @@ class Simulation( BaseClass ):
         valuesDict = self.setupScenario( self.sampleRowIdx_ )
         dt   = valuesDict['dt']
         maxT = inp.maxT
-        while not timeLimit:
-        # for _ in tqdm( range( int(maxT//dt) ) ):
-            valuesDict  = self.runScenario( valuesDict )
+        N = int(maxT/dt)
+        pbar = tqdm(total=N)
+        # while not timeLimit:
+        for _ in range(N):
+            valuesDict  = self.runScenario( valuesDict, **kwargs)
             collision   = valuesDict['collide']
             ejection    = valuesDict['eject']
             timeLimit   = valuesDict['timeLimit']
+            pbar.update(1)
             if earlyStop and any([ collision, ejection, timeLimit ]): break
+        pbar.close()
         self.recordScenario( valuesDict )
 
     #===========================================================================#
@@ -269,13 +273,13 @@ class Simulation( BaseClass ):
         # create columns with NaNs that will be filled in as sim runs
         for colName in self.colNames_['all']:
             if colName not in data: data[colName] = np.nan
-        # rescale starting position radii to be within limits in Input.controlFactors
-        for starIdx in range(3):
-            colName = f"pos_({starIdx},0,0)"
-            x = data[colName]
-            Z = (x - x.min()) / (x.max() - x.min())
-            LL, UL = inp.controlFactors[colName]
-            data[colName] = Z * (UL - LL) + LL
+        # # rescale starting position radii to be within limits in Input.controlFactors
+        # for starIdx in range(3):
+        #     colName = f"pos_({starIdx},0,0)"
+        #     x = data[colName]
+        #     Z = (x - x.min()) / (x.max() - x.min())
+        #     LL, UL = inp.controlFactors[colName]
+        #     data[colName] = Z * (UL - LL) + LL
         self.sample_ = data
 
     #===========================================================================#
@@ -297,16 +301,19 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--earlyStop', default=False)
+    parser.add_argument('--ejectSF', default=1)
     args = parser.parse_args()
     kwargs = args.__dict__
 
     # update key word arguments if presented
-    for key in []: kwargs[key] = int(kwargs[key])
-    for key in [earlyStop]:
-        if any([kwargs[key]=="false", kwargs[key]=='False', kwargs[key]=='0']):
-            kwargs[key] = False
-        elif any([kwargs[key]=='true', kwargs[key]=='True', kwargs[key]=='1']):
-            kwargs[key] = True
+    for key,val in kwargs.items():
+        if type(val) == str:
+            if val.lower()=='false':
+                kwargs[key] = False
+            elif val.lower()=='true':
+                kwargs[key] = True
+            else:
+                kwargs[key] = int(val)
 
     sim = Simulation()
     sim.run(**kwargs)

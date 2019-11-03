@@ -34,6 +34,7 @@ import pandas as pd
 import pdb
 import pickle
 import warnings
+warnings.filterwarnings('error')
 
 #===============================================================================#
 # auxillary                                                                     #
@@ -156,7 +157,10 @@ def xyz2spc(x_i3, **kwargs):
     spc = np.zeros( x_i3.shape ) # AU
 
     spc[:,0] = r # AU
-    spc[:,1] = np.arctan( rho / x_i3[:,2] ) # radians
+    try:
+        spc[:,1] = np.arctan( rho / x_i3[:,2] ) # radians
+    except:
+        spc[:,1] = np.pi/2
     spc[:,2] = np.arctan( x_i3[:,1] / x_i3[:,0] ) # radians
 
     return spc # [ AU, radians, radians ]
@@ -364,21 +368,35 @@ def nBodyRungeKutta4(time, dt, x_i3, xdot_i3, m_i1):
     # update positions and velocities
     dx_i3 = (dt/6) * (kr1 + 2*kr2 + 2*kr3 + kr4) # AU
     dv_i3 = (dt/6) * (kv1 + 2*kv2 + 2*kv3 + kv4) # km/s
-
-    # dv_i3_e = nBodyAcceleration(x_i3, m_i1) * dt # km/s^2
-    # dx_i3_e = dv_i3 * inp.km2au * dt # AU
-
     # update positions and velocities
     x_i3 += dx_i3 # AU
     xdot_i3 += dv_i3 # km/s
+
+    # # euler - change in velocities and positions
+    # dv_i3_e = nBodyAcceleration(x_i3, m_i1) * dt # km/s
+    # dx_i3_e = dv_i3_e * inp.km2au * dt # AU
+    # # euler - update velocities and positions
+    # xdot_i3 += dv_i3_e
+    # x_i3 += dx_i3_e
 
     # shift positions relative to CM
     CM_13 = findCM( x_i3, m_i1 ) # AU
     x_i3 -= CM_13 # AU
 
+    # #DEBUG MODE
+    # if checkEjection(x_i3, xdot_i3, m_i1):
+    #     vmax = escapeSpeed(x_i3, m_i1)
+    #     dv_i3_e = nBodyAcceleration(x_i3, m_i1) * dt # km/s
+    #     dx_i3_e = dv_i3_e * inp.km2au * dt # AU
+    #     dt_e = timeStep( dx_i3_e, dv_i3_e ) # s
+    #     print("ejection")
+    #     pdb.set_trace()
+    # if np.any(np.all(dv_i3 == 0, axis=1)):
+    #     print("0 speed")
+    #     pdb.set_trace()
+
     # update time
     time += dt # s
-
     # update time-step
     # dt = timeStep( dx_i3, dv_i3 ) # s
 
@@ -393,17 +411,19 @@ def timeStep(dx_i3, dv_i3, **kwargs):
     # if finding initial time step, x_i3 is position vectors
     dx_1 = np.sqrt( ( dx_i3**2 ).sum( axis=1 ) ) # AU
 
-    if initial:
-        # find the magnitudes and divide by 100
-        dx_1 = np.sqrt( ( dx_i3**2 ).sum( axis=1 ) ) * scale # AU
+    if initial: dx_1 *= scale
 
-    # convert dx_i1 from AU --> km
+    # convert dx_1 from AU --> km
     dx_1 /= inp.km2au # km
 
     # find the speeds
     dv_1 = np.sqrt( ( dv_i3**2 ).sum( axis=1 ) ) # km/s
     # calulate time step, take the minimum quotient
-    delta_t = np.abs( dx_1 / dv_1 ).min() # s
+    try:
+        delta_t = ( dx_1 / dv_1 ).min() # s
+    except:
+        print("time-step")
+        pdb.set_trace()
     return delta_t # s
 
 #===============================================================================#
@@ -655,7 +675,7 @@ def randomSpeed(maxSpeed_i1):
 #===============================================================================#
 
 def checkCollision(x_i3, r_i1):
-    warnings.filterwarnings('error')
+    # warnings.filterwarnings('error')
 
     # find the pair-wise distance for each body
     x_ij = pairwiseDistance( x_i3 ) # AU
@@ -670,8 +690,10 @@ def checkCollision(x_i3, r_i1):
     collide = np.any(collisions) # bool
     return collide
 
-def checkEjection(x_i3, xdot_i3, m_i1):
-    warnings.filterwarnings('error')
+def checkEjection(x_i3, xdot_i3, m_i1, **kwargs):
+    # warnings.filterwarnings('error')
+
+    ejectSF = kwargs['ejectSF'] if 'ejectSF' in kwargs else 1
 
     # determine the escape velocity from the system for each body
     vEscape_i1 = escapeSpeed(x_i3, m_i1) # km/s
@@ -680,6 +702,6 @@ def checkEjection(x_i3, xdot_i3, m_i1):
     speed_i1 = np.sqrt((xdot_i3**2).sum(axis=1, keepdims=True)) # km/s
 
     # determine any eminent ejections
-    ejections = (speed_i1 > vEscape_i1) # km/s
+    ejections = (speed_i1 > vEscape_i1 * ejectSF) # km/s
     eject = np.any(ejections) # bool
     return eject

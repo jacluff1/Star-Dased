@@ -5,6 +5,8 @@ temp/
 
 # ignore files
 **_bu*
+**/CUR_3Body_in.csv
 
 # ignore file types
 **.pyc
+**.pkl
