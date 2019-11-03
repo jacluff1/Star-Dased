@@ -3,8 +3,8 @@
 # import internal dependencies                                                  #
 #===============================================================================#
 
-from pyFiles.BaseClass import BaseClass
-from pyFiles.MetaModels.MLbase import MLbase
+from StarDased.pyFiles.BaseClass import BaseClass
+from MLbase import MLbase
 
 #===============================================================================#
 # import external dependencies                                                  #
