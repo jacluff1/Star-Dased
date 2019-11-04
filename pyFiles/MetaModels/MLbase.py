@@ -7,10 +7,6 @@
 from pyFiles.BaseClass import BaseClass
 from pyFiles.MetaModels.DataSet import DataSet
 
-# import modules
-import pyFiles.Functions as fun
-import pyFiles.Input as inp
-
 #===============================================================================#
 # import external dependencies                                                  #
 #===============================================================================#
@@ -18,7 +14,7 @@ import pyFiles.Input as inp
 import itertools
 import numpy as np
 import pandas as pd
-import pdb
+# import ipdb as pdb
 
 #===============================================================================#
 # Simulation definition                                                         #
@@ -32,15 +28,15 @@ class MLbase(BaseClass):
 
     def __init__(self, name, *args, **kwargs):
 
+        # set hyper-parameter map only if it doesn't exist yet
+        if not hasattr(self, 'parameterMap_'): self._getParameterMap(**kwargs)
+
         # construct smaller set of kwargs used for construction
         kwargs1 = {}
         if 'verbose' in kwargs: kwargs1['verbose'] = kwargs['verbose']
 
         # run BaseClass constructor for Simulation instance
         super().__init__(name, *args, **kwargs)
-
-        # set hyper-parameter map only if it doesn't exist yet
-        if not hasattr(self, 'parameterMap_'): self._getParameterMap(**kwargs)
 
         # add DataFrame sim data if not present
         if not hasattr(self, 'data_'): self._splitData()
@@ -119,7 +115,7 @@ class MLbase(BaseClass):
         # return model hyperparameters
         return params
 
-    def _splitData(self, DF, **kwargs):
+    def _splitData(self, **kwargs):
 
         # set variables by key word arguments
         trainP = kwargs['trainP'] if 'trainP' in kwargs else 0.6
@@ -133,10 +129,11 @@ class MLbase(BaseClass):
         df = pd.read_csv("data/Simulation.csv")
 
         # collect the row indicies where the outcome is different
-        idxEst = {key:df[df.colName==1].index.values for colName in self.colNames_['estimators']}
+        idxEst = {colName:df[df[colName]==1].index.values for colName in self.colNames_['estimators']}
 
         # shuffle all the indicies
-        for idx in idxEst.values(): np.random.shuffle(idx, seed=seed)
+        np.random.seed(seed)
+        for idx in idxEst.values(): np.random.shuffle(idx)
 
         # collect the number of rows associtated with each estimator outcome
         nEst = {key:val.size for key,val in idxEst.items()}
@@ -146,14 +143,20 @@ class MLbase(BaseClass):
 
         for colName in self.colNames_['estimators']:
             # get the number from each estimator being divyied up between datasets
-            Nds = {key:int(Nest[colName]*splitPercentage[dsName]) for dsName in ['train', 'validate', 'test']}
+            Nds = {dsName:int(nEst[colName]*splitPercentage[dsName]) for dsName in ['train', 'validate', 'test']}
             # slice index arrays from estimates and add them to idxDs collection
             idxDs['train'] = idxEst[colName][:Nds['train']]
             idxDs['validate'] = idxEst[colName][Nds['train']:Nds['train']+Nds['validate']]
-            idx['test'] = idxEst[Nds['train']+Nds['validate']:]
+            idxDs['test'] = idxEst[colName][Nds['train']+Nds['validate']:]
 
         # merge list of index arrays for each dataset into single array of indices
         for dsName,idxList in idxDs.items(): idxDs[dsName] = np.hstack(idxList)
+
+        # make a column that collects the one-hotted estimator columns into a single column of discrete values
+        NotImplemented
+
+        # collect the Xcols and Ycols
+        NotImplemented
 
         # add dictionary of split data
         self.data_ = {dsName:DataSet(df.iloc[idx]) for dsName,idx in idxDs.items()}
@@ -173,7 +176,7 @@ class MLbase(BaseClass):
 
     def _getSample(self, **kwargs):
         self.sample_ = pd.DataFrame(
-            list(itertools(self.parameterMap_.values())),
+            list(itertools.product(*self.parameterMap_.values())),
             columns = self.parameterMap_.keys()
         )
         # add columns to track model performance for train, validate, test

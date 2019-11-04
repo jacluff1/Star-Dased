@@ -3,10 +3,10 @@
 # import internal dependencies                                                  #
 #===============================================================================#
 
-from BaseClass import BaseClass
+from pyFiles.BaseClass import BaseClass
 
-import Functions as fun
-import Input as inp
+import pyFiles.Functions as fun
+import pyFiles.Input as inp
 
 #===============================================================================#
 # import external dependencies                                                  #
@@ -292,28 +292,3 @@ class Simulation( BaseClass ):
         factors, or random factors. If you want to include\
         any random factors, other than initial speed, you'll have to implement\
         it!")
-
-#===============================================================================#
-# main                                                                          #
-#===============================================================================#
-
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--earlyStop', default=False)
-    parser.add_argument('--ejectSF', default=1)
-    args = parser.parse_args()
-    kwargs = args.__dict__
-
-    # update key word arguments if presented
-    for key,val in kwargs.items():
-        if type(val) == str:
-            if val.lower()=='false':
-                kwargs[key] = False
-            elif val.lower()=='true':
-                kwargs[key] = True
-            else:
-                kwargs[key] = int(val)
-
-    sim = Simulation()
-    sim.run(**kwargs)

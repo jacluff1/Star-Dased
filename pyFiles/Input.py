@@ -128,7 +128,7 @@ sampleFileDropColumns = [ 'N/A' ]
 #===============================================================================#
 
 RFclassifierParameterMap = {
-    'n_estimators' : [1, 10, 20, 50, 100, 200, 5000],
-    'max_depth' : [None] + [x for x in range(10)],
-    'min_samples_leaf' : [x for x in range(10)]
+    'n_estimators' : [1, 10, 20, 50, 100, 200, 500],
+    'max_depth' : [None] + [x for x in range(1,10)],
+    'min_samples_leaf' : [x for x in range(1,10)]
 }

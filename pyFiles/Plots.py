@@ -3,9 +3,9 @@
 # import internal dependencies                                                  #
 #===============================================================================#
 
-import Functions as fun
-import Input as inp
-from Simulation import Simulation
+import pyFiles.Functions as fun
+import pyFiles.Input as inp
+from pyFiles.Simulation import Simulation
 
 #===============================================================================#
 # import external dependencies                                                  #
