@@ -21,7 +21,7 @@ def generic():
 # import internal dependencies                                                  #
 #===============================================================================#
 
-import Input as inp
+import pyFiles.Input as inp
 
 #===============================================================================#
 # import external dependencies                                                  #
