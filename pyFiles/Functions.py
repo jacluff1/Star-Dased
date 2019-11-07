@@ -430,8 +430,8 @@ def timeStep(dx_i3, dv_i3, **kwargs):
 # meta model auxillary Functions                                                #
 #===============================================================================#
 
-def oneHotEncodeY(y):
-    K = len(set(y))
+def oneHotEncodeY(y, **kwargs):
+    K = kwargs['K'] if 'K' in kwargs else len(set(y))
     Y = np.zeros((y.shape[0],K))
     for idx,val in enumerate(y):
         Y[idx,val] = 1
@@ -450,12 +450,24 @@ def shuffle(*args, **kwargs):
 # meta model metrics                                                            #
 #===============================================================================#
 
-def accuracy(Y, Yhat):
+def accuracy(*args):
     """
     (number predicted correctly) / (total number). outputs scalar
+
+    if 2 args: Y, Yhat
+    if 1 arg: CM
     """
-    # works for both Yhat and Phat, but all values have to be N by K
-    return np.mean(Y.argmax(axis=1) == Yhat.argmax(axis=1))
+    if len(args) == 2:
+        Y,Yhat = args
+        # works for both Yhat and Phat, but all values have to be N by K
+        return np.mean(Y.argmax(axis=1) == Yhat.argmax(axis=1))
+    elif len(args) == 1:
+        # assign confusion matrix
+        CM = args[0]
+        # output accuracy (save because sum CM_ij should never == 0)
+        return CM.diagonal().sum() / CM.sum()
+    else:
+        raise AssertionError("Oopsie! Either enter: Y & Yhat or CM as args!")
 
 def confusionMatrix(Y, Yhat, **kwargs):
     """
@@ -480,26 +492,66 @@ def falsePositive(Y, Yhat):
     """
     return ((Yhat == 1) & (Yhat != Y)).sum(axis=0)
 
-def recall(Y, Yhat):
+def recall(*args):
     """
     (number of true positives) / (total number actually positive). outputs (1,K)
     array.
+
+    if 2 args: Y, Yhat
+    if 1 arg: CM
     """
-    TP = truePositive(Y, Yhat)
-    FN = falseNegative(Y, Yhat)
-    return TP / (TP + FN)
+    if len(args) == 2:
+        Y,Yhat = args
+        TP = truePositive(Y, Yhat)
+        FN = falseNegative(Y, Yhat)
+        # calculate denominator
+        temp1 = TP + FN
+        # replace 0s in denominator with np.inf to surpass divide by zero business
+        temp2 = np.where(temp1==0, np.inf, temp1)
+        return TP / temp2
+    elif len(args) == 1:
+        # assign confustion matrix
+        CM = args[0]
+        # temporary variable for denominator
+        temp1 = CM.sum(axis=0, keepdims=True)
+        # if any sum of any column == 0, replace column sum with 1. This is fine because in that situation, the diagonal component will be zero and the value will result in zero anyway; however, it will bypass divide by zero warning
+        temp2 = np.where(temp1==0, 1, temp1)
+        # output quotient of (1xK) diagonal with (1xK) safe row vector of column sums
+        return CM.diagonal()[None,:] / temp2
+    else:
+        raise AssertionError("Oopsie! Either enter: Y & Yhat or CM as args!")
 
 def ROC_AUC(Y, Yhat):
     NotImplemented
 
-def precision(Y, Yhat):
+def precision(*args):
     """
     (number of true positives) / (total number predicted positive). outputs
     (1,K) array.
+
+    if 2 args: Y, Yhat
+    if 1 arg: CM
     """
-    TP = truePositive(Y, Yhat)
-    FP = falsePositive(Y, Yhat)
-    return TP / (TP + FP)
+    if len(args) == 2:
+        Y,Yhat = args
+        TP = truePositive(Y, Yhat)
+        FP = falsePositive(Y, Yhat)
+        # calculate denominator
+        temp1 = TP + FP
+        # replace 0s in denominator with np.inf to surpass divide by zero busniess
+        temp2 = np.where(temp1==0, np.inf, temp1)
+        return TP / temp2
+    elif len(args) == 1:
+        # assign confusion matrix
+        CM = args[0]
+        # temporary variable for denominator
+        temp1 = CM.sum(axis=1, keepdims=True)
+        # if any sum of any row == 0, replace row sum with 1. This is fine because in that situation, the diagonal component will be zero and the value will result in zero anyway; however, it will bypass divide by zero warning
+        temp2 = np.where(temp1==0, 1, temp1)
+        # take the transpose of the quotient of the (1xK) diagonal vector with the safe (1xK) column vector of row sums
+        return (CM.diagonal()[:,None] / temp2).T
+    else:
+        raise AssertionError("Oopsie! Either enter: Y & Yhat or CM as args!")
 
 def truePositive(Y, Yhat):
     """
