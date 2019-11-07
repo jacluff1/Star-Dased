@@ -1,20 +1,17 @@
 Python files in this directory are for taking the sim output and creating
 surrogate models.
 ================================================================================
-|  aseModel         | Define a base model class that will be used for both     |
-|                   | sim and meta models. Provide save-load capability        |
-|                   | and anything else that may be useful.                    |
+| DataSet           | wraps a pd.DataFrame with easy access to factors, predic-|
+|                   | tors, estimators, and performance metrics.               |
 |-------------------|----------------------------------------------------------|
-| Functions         | Auxillary function definitions shared across multiple    |
-|                   | files/modules.                                           |
+| MLbase            | extends BaseClass and modifies it to apply more directly |
+|                   | to regression and machine learning models.               |
 |-------------------|----------------------------------------------------------|
-| Input             | Definitions for any and all constants, conversions, etc  |
+| LogisticRegression| simple classification model for 3-outcome classification |
+|                   | (hopefully someday).                                     |
 |-------------------|----------------------------------------------------------|
-| Plots             | 3D static plot, animation, exploritory data analysis     |
-|                   | (hopefully someday)                                      |
-|-------------------|----------------------------------------------------------|
-| Simulation        | takes in all user input and runs the simulation. will    |
-|                   | save progress as it runs in a Simulation.pkl; as soon as |
-|                   | sim is done running, will save completed data as         |
-|                   | Simulation.csv.                                          |
+| RFclassification  | random forest model with classification trees. will      |
+|                   | complete a grid search, exploring stopping criteria that |
+|                   | results in the model that will make best predictions (at |
+|                   | least from the hyperparmeters sampled).                  |
 ================================================================================
