@@ -29,6 +29,17 @@ pip3 install -r requirements.txt
 pre-run
 -------
 make sure and stay in the repo root directory to run.
+
+
+run method 1 (recommended)
+--------------------------
+to run all the default models with default options (assumes you followed recommended install)
+```bash
+./runit.sh
+```
+
+run method 2
+------------
 if using the virtual environment, make sure to activate it (if not already activated)
 ```bash
 source activateEnv.sh
@@ -37,16 +48,6 @@ source activateEnv.sh
 ```bash
 deactivate
 ```
-
-run method 1 (recommended)
---------------------------
-to run all the default models with default options
-```bash
-./runit.sh
-```
-
-run method 2
-------------
 to have control over what models to run and what options to use
 ```bash
 python -B Main.py
