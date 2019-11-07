@@ -15,7 +15,7 @@ Download and install Python 3.6 or higher from www.python.org
 
 install continued: using virtual environment (recommended)
 ----------------------------------------------------------
-setup virtual environment, install/update dependencies, activate virtual environment, and give permissions to runit.sh. This only needs to be done once (or if you want to update virtual environment packages)
+setup virtual environment, install/update dependencies, activate virtual environment, and give permissions to runit.sh. this only needs to be done once (or if you want to update virtual environment packages)
 ```bash
 source setEnv.sh
 ```
@@ -28,7 +28,7 @@ pip3 install -r requirements.txt
 
 pre-run
 -------
-make sure and stay in the repo root directory to run
+make sure and stay in the repo root directory to run.
 if using the virtual environment, make sure to activate it (if not already activated)
 ```bash
 source activateEnv.sh
