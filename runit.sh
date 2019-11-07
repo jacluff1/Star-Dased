@@ -4,4 +4,4 @@
 # activate StarDasedEnv
 source activateEnv.sh
 
-python -B Main.py
+python -B Main.py --sim --earlyStop --plot3Dpos --anim --rfc
