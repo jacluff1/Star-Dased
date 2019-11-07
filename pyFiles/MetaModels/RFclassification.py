@@ -4,6 +4,7 @@
 #===============================================================================#
 
 from sklearn.ensemble import RandomForestClassifier
+import ipdb
 
 #===============================================================================#
 # import internal dependencies                                                  #
@@ -37,13 +38,13 @@ class RandomForests(MLbase):
 
     def fit(self):
         # fit with training data only
-        self.model_.fit(self.data_['train'].X(), self.data_['train'].Y())
+        self.model_.fit(self.data_['train'].X(), self.data_['train'].y())
 
     def predict(self):
         for key in ['train', 'validate', 'test']:
             X = self.data_[key].X()
-            Yhat = self.model_.predict(X)
-            self.data_[key].updateYhat(Yhat)
+            yhat = self.model_.predict(X)
+            self.data_[key].update(yhat)
 
     #===========================================================================#
     # semp-protected methods                                                    #
@@ -92,7 +93,10 @@ class RandomForests(MLbase):
         for metricName, metricDict in zip(['accuracy', 'precision', 'recall'], [accuracy, precision, recall]):
             for cvIdx, key in enumerate(['train', 'validate', 'test']):
                 colName = f"{metricName}_({cvIdx})"
-                self.sample_.loc[self.sampleRowIdx_, colName] = metricDict[key]
+                try:
+                    self.sample_.loc[self.sampleRowIdx_, colName] = metricDict[key]
+                except:
+                    ipdb.set_trace()
 
     #===========================================================================#
     # semi-private methods                                                      #
