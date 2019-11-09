@@ -3,18 +3,19 @@
 # import internal dependencies                                                  #
 #===============================================================================#
 
-import Functions as fun
-import Input as inp
+import pyFiles.Functions as fun
+import pyFiles.Input as inp
 
 #===============================================================================#
 # import external dependencies                                                  #
 #===============================================================================#
 
 from copy import deepcopy
+from tqdm import tqdm
 import numpy as np
+import os
 import pandas as pd
 import pdb
-import os
 
 #===============================================================================#
 # BaseClass definition                                                          #
@@ -132,6 +133,10 @@ class BaseClass:
         fun.toPickle( f"data/{self.name_}.pkl", self.__dict__, **kwargs )
 
     def run(self, **kwargs):
+        # find number of scenarios left to run
+        nRun = self.sample_.shape[0] - self.sampleRowIdx_
+        # make a manual progress bar
+        pbar = tqdm(total=nRun)
         while not self.runComplete_:
             # run the treatement for current treatement, specified by
             # sampleRowIdx
@@ -143,6 +148,11 @@ class BaseClass:
             self.runComplete_ = (self.sampleRowIdx_ == self.sample_.shape[0])
             # save current state of sim model
             self.saveState()
+            # update progress bar
+            pbar.update()
+        # close progress bar
+        pbar.close()
+        fun.printHeader(f"finished {self.name_} scenarios!", verbose=True)
         self.sample_.to_csv(f"data/{self.name_}.csv", index=False)
 
     #===========================================================================#

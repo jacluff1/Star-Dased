@@ -1,1 +1,1 @@
-Any saved data (csv) or saved models (pkl)
+Any input data or generated data (csv or txt)

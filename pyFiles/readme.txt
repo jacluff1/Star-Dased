@@ -5,26 +5,16 @@ simulation. Files included:
 |                   | sim and meta models. Provide save-load capability        |
 |                   | and anything else that may be useful.                    |
 |-------------------|----------------------------------------------------------|
-| FactorSpace       | 1) Define the parameters and their range.                |
-|                   | 2) Construct a pd.DataFrame of all the input value       |
-|                   |   permutations.                                          |
-|                   | 3) Save as csv. Another option would be to have a model  |
-|                   |   instance that can save and load itself, perhaps as pkl.|
-|-------------------|----------------------------------------------------------|
 | Functions         | Auxillary function definitions shared across multiple    |
 |                   | files/modules.                                           |
 |-------------------|----------------------------------------------------------|
 | Input             | Definitions for any and all constants, conversions, etc  |
 |-------------------|----------------------------------------------------------|
-| Main              | Any main instructions -- not implemented yet             |
+| Plots             | 3D static plot, animation, exploritory data analysis     |
+|                   | (hopefully someday)                                      |
 |-------------------|----------------------------------------------------------|
-| MassDistrobution  | Use an initial mass function (IMF) to calculate a mass   |
-|                   | distribution. Use the mass PDF to create a generating    |
-|                   | function that will randomly select a mass and thereby    |
-|                   | also select spectral type and star radius.               |
-|-------------------|----------------------------------------------------------|
-| Simulation        | My idea is to create define an class instance that can   |
-|                   | run the simulation, save its progress (perhaps by        |
-|                   | pickling itself), and able to load its progress upon     |
-|                   | construction.                                            |
+| Simulation        | takes in all user input and runs the simulation. will    |
+|                   | save progress as it runs in a Simulation.pkl; as soon as |
+|                   | sim is done running, will save completed data as         |
+|                   | Simulation.csv.                                          |
 ================================================================================

@@ -6,8 +6,6 @@
 # import class definitions
 from pyFiles.BaseClass import BaseClass
 from pyFiles.MetaModels.DataSet import DataSet
-
-# import modules
 import pyFiles.Functions as fun
 import pyFiles.Input as inp
 
@@ -18,7 +16,6 @@ import pyFiles.Input as inp
 import itertools
 import numpy as np
 import pandas as pd
-import pdb
 
 #===============================================================================#
 # Simulation definition                                                         #
@@ -32,6 +29,9 @@ class MLbase(BaseClass):
 
     def __init__(self, name, *args, **kwargs):
 
+        # set hyper-parameter map only if it doesn't exist yet
+        if not hasattr(self, 'parameterMap_'): self._getParameterMap(**kwargs)
+
         # construct smaller set of kwargs used for construction
         kwargs1 = {}
         if 'verbose' in kwargs: kwargs1['verbose'] = kwargs['verbose']
@@ -39,11 +39,11 @@ class MLbase(BaseClass):
         # run BaseClass constructor for Simulation instance
         super().__init__(name, *args, **kwargs)
 
-        # set hyper-parameter map only if it doesn't exist yet
-        if not hasattr(self, 'parameterMap_'): self._getParameterMap(**kwargs)
-
         # add DataFrame sim data if not present
         if not hasattr(self, 'data_'): self._splitData()
+
+        # add estimator index (index of estimator column of primary concern)
+        if not hasattr(self, 'estIdx_'): self.estIdx_ = 2
 
     #===========================================================================#
     # public methods                                                            #
@@ -59,25 +59,19 @@ class MLbase(BaseClass):
     def performanceAccuracy(self):
         results = {}
         for key in ['train', 'validate', 'test']:
-            Y = self.data_[key].Y()
-            Yhat = self.data_[key].Yhat()
-            results[key] = fun.accuracy(Y, Yhat)
+            results[key] = self.data_[key].accuracy_
         return results
 
     def performancePrecision(self):
         results = {}
         for key in ['train', 'validate', 'test']:
-            Y = self.data_[key].Y()
-            Yhat = self.data_[key].Yhat()
-            results[key] = fun.precision(Y, Yhat)
+            results[key] = self.data_[key].precision_[0, self.estIdx_]
         return results
 
     def performanceRecall(self):
         results = {}
         for key in ['train', 'validate', 'test']:
-            Y = self.data_[key].Y()
-            Yhat = self.data_[key].Yhat()
-            results[key] = fun.recall(Y, Yhat)
+            results[key] = self.data_[key].recall_[0, self.estIdx_]
         return results
 
     #===========================================================================#
@@ -99,15 +93,22 @@ class MLbase(BaseClass):
 
     def _buildBestModel(self, *args, **kwargs):
         # set variables by key word arguments
-        metric = kwargs['metric'] if 'metric' in kwargs else 'accuracy'
+        metric = kwargs['metric'] if 'metric' in kwargs else 'sum'
+        # metrics available
+        metrics = ['accuracy', 'precision', 'recall']
+        # validation column names for each metric
+        valCols = [f"{x}_(1)" for x in metrics]
         # find validate metric column
-        metric += "_(1)"
-        # find a filtered view of sample that has best validate metric
-        df = self.sample_[self.sample_[metric] == self.sample_[metric].max()]
-        # make sure df only has one result
-        assert df.shape[0] == 1, f"it seems {metric} has multiple best results"
-        # get the sample row index that hold best model hyperpareters
-        sampleRowIdx = df.index[0]
+        if metric == 'sum':
+            metricCol = metric
+            # create metric column by summing the validation entries for each available metric.
+            self.sample_[metric] = self.sample_[valCols].sum(axis=1)
+        elif metric in ['accuracy', 'precision', 'recall']:
+            metricCol = f"{metric}_(1)"
+        else:
+            raise KeyError("OOPSIE! you seem to have entered a metric value incorrectly, or have selected a metric that isn't yet implemented.\ntry entries like: 'accuracy', 'precision', 'recall', or 'sum'.")
+        # find the row index with the maximum value in the chosen metric column
+        sampleRowIdx = self.sample_[metricCol].idxmax()
         # re-run the best scenario to update all relevant data
         self._runScenario(sampleRowIdx, **kwargs)
 
@@ -116,10 +117,17 @@ class MLbase(BaseClass):
         sampleRow = self.sample_.iloc[sampleRowIdx]
         # find model hyperparameters
         params = {key:sampleRow[key] for key in self.parameterMap_.keys()}
+        # replace any pandas NaN with native None
+        for key,val in params.items():
+            if str(val).lower() == 'nan': params[key] = None
+        # add in the number of estimators
+        params['n_estimators'] = len(self.colNames_['estimators'])
+        # enforce data types
+        params['min_samples_leaf'] = int(params['min_samples_leaf'])
         # return model hyperparameters
         return params
 
-    def _splitData(self, DF, **kwargs):
+    def _splitData(self, **kwargs):
 
         # set variables by key word arguments
         trainP = kwargs['trainP'] if 'trainP' in kwargs else 0.6
@@ -133,10 +141,11 @@ class MLbase(BaseClass):
         df = pd.read_csv("data/Simulation.csv")
 
         # collect the row indicies where the outcome is different
-        idxEst = {key:df[df.colName==1].index.values for colName in self.colNames_['estimators']}
+        idxEst = {colName:df[df[colName]==1].index.values for colName in self.colNames_['estimators']}
 
         # shuffle all the indicies
-        for idx in idxEst.values(): np.random.shuffle(idx, seed=seed)
+        np.random.seed(seed)
+        for idx in idxEst.values(): np.random.shuffle(idx)
 
         # collect the number of rows associtated with each estimator outcome
         nEst = {key:val.size for key,val in idxEst.items()}
@@ -146,17 +155,25 @@ class MLbase(BaseClass):
 
         for colName in self.colNames_['estimators']:
             # get the number from each estimator being divyied up between datasets
-            Nds = {key:int(Nest[colName]*splitPercentage[dsName]) for dsName in ['train', 'validate', 'test']}
+            Nds = {dsName:int(nEst[colName]*splitPercentage[dsName]) for dsName in ['train', 'validate', 'test']}
             # slice index arrays from estimates and add them to idxDs collection
             idxDs['train'] = idxEst[colName][:Nds['train']]
             idxDs['validate'] = idxEst[colName][Nds['train']:Nds['train']+Nds['validate']]
-            idx['test'] = idxEst[Nds['train']+Nds['validate']:]
+            idxDs['test'] = idxEst[colName][Nds['train']+Nds['validate']:]
 
         # merge list of index arrays for each dataset into single array of indices
         for dsName,idxList in idxDs.items(): idxDs[dsName] = np.hstack(idxList)
 
+        # make a column that collects the one-hotted estimator columns into a single column of discrete values
+        # df['y'] = df[self.colNames_['estimators']].to_numpy(np.int32).argmax(axis=1)
+
+        # collect the Xcols and Ycols
+        Xcols = list(inp.controlFactors.keys()) + inp.randomFactors
+        Ycols = self.colNames_['estimators']
+        # Ycols = ['y']
+
         # add dictionary of split data
-        self.data_ = {dsName:DataSet(df.iloc[idx]) for dsName,idx in idxDs.items()}
+        self.data_ = {dsName:DataSet(df.iloc[idx], Xcols, Ycols) for dsName,idx in idxDs.items()}
 
     #===========================================================================#
     # semi-protected methods                                                    #
@@ -173,7 +190,7 @@ class MLbase(BaseClass):
 
     def _getSample(self, **kwargs):
         self.sample_ = pd.DataFrame(
-            list(itertools(self.parameterMap_.values())),
+            list(itertools.product(*self.parameterMap_.values())),
             columns = self.parameterMap_.keys()
         )
         # add columns to track model performance for train, validate, test
