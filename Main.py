@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     # exploratory analysis
     if eda:
-        import pyFiles.explore_data.py
+        import pyFiles.explore_data
 
     # plot static 3d positions
     if plot3Dpos:

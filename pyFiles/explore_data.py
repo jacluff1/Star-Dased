@@ -8,43 +8,50 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 import seaborn as sns
 
+show = False
 plt.rc("font",size=14)
 sns.set(style="white")
 sns.set(style="whitegrid",color_codes=True)
 data = pd.read_csv("data/Simulation.csv")
+
 
 #Plot showing major factors that survived 
 surv = data.ix[:,'survive']
 admitted = data.loc[surv == 1]
 not_admitted = data.loc[surv == 0]
 
+fig = plt.figure()
 plt.scatter(admitted.ix[:,'pos_(2,1,0)'],admitted.ix[:,'vel_(2,1,0)'], label='Survived')
 plt.legend()
 plt.scatter(not_admitted.ix[:,'pos_(2,1,0)'],not_admitted.ix[:,'vel_(2,1,0)'],label = 'Not Survived')
 plt.xlabel('pos_(2,1,0)')
 plt.ylabel('vel_(2,1,0)')
 plt.legend()
-plt.show()
+if show: plt.show()
 plt.savefig('figures/ScatterPlot1')
+plt.close(fig)
 
+fig = plt.figure()
 plt.scatter(admitted.ix[:,'pos_(2,1,0)'],admitted.ix[:,'mass_(1)'], label='Survived')
 plt.legend()
 plt.scatter(not_admitted.ix[:,'pos_(2,1,0)'],not_admitted.ix[:,'mass_(1)'],label = 'Not Survived')
 plt.xlabel('pos_(2,1,0)')
 plt.ylabel('mass_(1)')
 plt.legend()
-plt.show()
+if show: plt.show()
 plt.savefig('figures/ScatterPlot3')
+plt.close(fig)
 
+fig = plt.figure()
 plt.scatter(admitted.ix[:,'pos_(2,1,0)'],admitted.ix[:,'survive'], label='Survived')
 plt.legend()
 plt.scatter(not_admitted.ix[:,'pos_(2,1,0)'],not_admitted.ix[:,'survive'],label = 'Not Survived')
 plt.xlabel('pos_(2,1,0)')
 plt.ylabel('survive')
 plt.legend()
-plt.show()
-plt.savefig('ScatterPlot4')
-
+if show: plt.show()
+plt.savefig('figures/ScatterPlot4')
+plt.close(fig)
 
 data_1 = pd.read_csv("data/Simulation.csv")
 
@@ -58,12 +65,15 @@ print(list(data.columns))
 
 data.head()
 
+fig = plt.figure()
 sns.countplot(x='survive',data=data,palette='hls')
-plt.show()
-plt.savefig('count_plot')
+if show: plt.show()
+plt.savefig('figures/count_plot')
+plt.close(fig)
 
 data['survive'].value_counts()
 
+fig = plt.figure()
 treatments = data_1['treatmentN']
 survivals = data_1['survive']
 surv_avg = data.ix[:,'survive'].sum()/150
@@ -77,15 +87,16 @@ plt.legend(handles=[line1,line2,line3],loc='lower right')
 plt.xlabel('Treatments')
 plt.ylabel('Probability of Survive')
 plt.title('Sample Sequence Probability 3 Star Orbit Stability')
-plt.show()
+if show: plt.show()
 plt.savefig('figures/Sample_Sequence_Plot')
+plt.close(fig)
 
 #data_final_vars=data.columns.values.tolist()
 #y = ['treatmentN', 'monteCarloN', 'eject', 'collide', 'nSteps', 'survive', 'pos_(0,1,0)', 'pos_(1,1,0)', 'pos_(0,2,0)', 'pos_(1,2,0)', 'pos_(2,2,0)', 'vel_(0,1,0)', 'vel_(1,1,0)', 'vel_(0,2,0)', 'vel_(1,2,0)', 'vel_(2,2,0)', 'vel_(0,0,0)', 'vel_(1,0,0)', 'vel_(2,0,0)', 'runTime', 'pos_(0,0,-1)', 'vel_(0,0,-1)', 'pos_(0,1,-1)', 'vel_(0,1,-1)', 'pos_(0,2,-1)', 'vel_(0,2,-1)', 'pos_(1,0,-1)', 'vel_(1,0,-1)', 'pos_(1,1,-1)', 'vel_(1,1,-1)', 'pos_(1,2,-1)', 'vel_(1,2,-1)', 'pos_(2,0,-1)', 'vel_(2,0,-1)', 'pos_(2,1,-1)', 'vel_(2,1,-1)', 'pos_(2,2,-1)', 'vel_(2,2,-1)']
 
 #X=[i for i in data_final_vars if i not in y]
 
-x = data[X]
+#x = data[X]
 y = data['survive']
 x = data[list(inp.controlFactors.keys())]
 
@@ -132,20 +143,24 @@ logreg.fit(xi,np.ravel(yi.astype(int)))
 print(logreg.coef_)
 print(logreg.intercept_)
 
+fig = plt.figure()
 #pdb.set_trace()
 plt.scatter(xi,yi)
 plt.xlabel('pos_(2,1,0)')
 plt.ylabel('Probability of Survival')
 plt.scatter(xi,logreg.predict_proba(xi)[:,1])
-plt.show()
+if show: plt.show()
 plt.savefig('figures/LogisticRegressionSingleFactor')
+plt.close(fig)
 
+fig = plt.figure()
 x = np.linspace(-10,10,40).reshape(40,1)
 y = 1/(1+np.exp(-(logreg.intercept_+logreg.coef_*x)))
 y.reshape(40,1)
 plt.plot(x,y)
-plt.show()
-plt.savefig('Logistic Regression Single Factor Curve')
+if show: plt.show()
+plt.savefig('figures/LogisticRegressionSingleFactorCurve')
+plt.close(fig)
 
 #import statsmodels.api as sm
 #logit_model_all=sm.Logit(y,x)
