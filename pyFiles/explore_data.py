@@ -1,6 +1,4 @@
-from __future__ import division 
-
-import pylab as pl
+import pyFiles.Input as inp
 import pandas as pd
 import numpy as np
 import pdb
@@ -13,14 +11,7 @@ import seaborn as sns
 plt.rc("font",size=14)
 sns.set(style="white")
 sns.set(style="whitegrid",color_codes=True)
-
-
-data = pd.read_csv("Simulation.csv")
-#data.hist()
-#pl.show()
-
-#pdb.set_trace()
-
+data = pd.read_csv("data/Simulation.csv")
 
 #Plot showing major factors that survived 
 surv = data.ix[:,'survive']
@@ -34,7 +25,7 @@ plt.xlabel('pos_(2,1,0)')
 plt.ylabel('vel_(2,1,0)')
 plt.legend()
 plt.show()
-plt.savefig('Scatter Plot 1')
+plt.savefig('figures/ScatterPlot1')
 
 plt.scatter(admitted.ix[:,'pos_(2,1,0)'],admitted.ix[:,'mass_(1)'], label='Survived')
 plt.legend()
@@ -43,7 +34,7 @@ plt.xlabel('pos_(2,1,0)')
 plt.ylabel('mass_(1)')
 plt.legend()
 plt.show()
-plt.savefig('Scatter Plot 3')
+plt.savefig('figures/ScatterPlot3')
 
 plt.scatter(admitted.ix[:,'pos_(2,1,0)'],admitted.ix[:,'survive'], label='Survived')
 plt.legend()
@@ -52,10 +43,10 @@ plt.xlabel('pos_(2,1,0)')
 plt.ylabel('survive')
 plt.legend()
 plt.show()
-plt.savefig('Scatter Plot 4')
+plt.savefig('ScatterPlot4')
 
 
-data_1 = pd.read_csv("Simulation.csv")
+data_1 = pd.read_csv("data/Simulation.csv")
 
 data_tmp = data.groupby("treatmentN").sum()/16
 
@@ -73,13 +64,6 @@ plt.savefig('count_plot')
 
 data['survive'].value_counts()
 
-count_no_sur = len(data[data['survive']==0])
-count_sur = len(data[data['survive']==1])
-pct_of_no_sur = count_no_sur/(count_no_sur+count_sur)
-print("percent of no survival is ", pct_of_no_sur*100, '%')
-pct_of_sur = count_sur/(count_no_sur+count_sur)
-print("percent of survival is ", pct_of_sur*100, '%')
-
 treatments = data_1['treatmentN']
 survivals = data_1['survive']
 surv_avg = data.ix[:,'survive'].sum()/150
@@ -94,16 +78,16 @@ plt.xlabel('Treatments')
 plt.ylabel('Probability of Survive')
 plt.title('Sample Sequence Probability 3 Star Orbit Stability')
 plt.show()
-plt.savefig('Sample_Sequence_Plot')
+plt.savefig('figures/Sample_Sequence_Plot')
 
-data_final_vars=data.columns.values.tolist()
-y = ['treatmentN', 'monteCarloN', 'eject', 'collide', 'nSteps', 'survive', 'pos_(0,1,0)', 'pos_(1,1,0)', 'pos_(0,2,0)', 'pos_(1,2,0)', 'pos_(2,2,0)', 'vel_(0,1,0)', 'vel_(1,1,0)', 'vel_(0,2,0)', 'vel_(1,2,0)', 'vel_(2,2,0)', 'vel_(0,0,0)', 'vel_(1,0,0)', 'vel_(2,0,0)', 'runTime', 'pos_(0,0,-1)', 'vel_(0,0,-1)', 'pos_(0,1,-1)', 'vel_(0,1,-1)', 'pos_(0,2,-1)', 'vel_(0,2,-1)', 'pos_(1,0,-1)', 'vel_(1,0,-1)', 'pos_(1,1,-1)', 'vel_(1,1,-1)', 'pos_(1,2,-1)', 'vel_(1,2,-1)', 'pos_(2,0,-1)', 'vel_(2,0,-1)', 'pos_(2,1,-1)', 'vel_(2,1,-1)', 'pos_(2,2,-1)', 'vel_(2,2,-1)']
+#data_final_vars=data.columns.values.tolist()
+#y = ['treatmentN', 'monteCarloN', 'eject', 'collide', 'nSteps', 'survive', 'pos_(0,1,0)', 'pos_(1,1,0)', 'pos_(0,2,0)', 'pos_(1,2,0)', 'pos_(2,2,0)', 'vel_(0,1,0)', 'vel_(1,1,0)', 'vel_(0,2,0)', 'vel_(1,2,0)', 'vel_(2,2,0)', 'vel_(0,0,0)', 'vel_(1,0,0)', 'vel_(2,0,0)', 'runTime', 'pos_(0,0,-1)', 'vel_(0,0,-1)', 'pos_(0,1,-1)', 'vel_(0,1,-1)', 'pos_(0,2,-1)', 'vel_(0,2,-1)', 'pos_(1,0,-1)', 'vel_(1,0,-1)', 'pos_(1,1,-1)', 'vel_(1,1,-1)', 'pos_(1,2,-1)', 'vel_(1,2,-1)', 'pos_(2,0,-1)', 'vel_(2,0,-1)', 'pos_(2,1,-1)', 'vel_(2,1,-1)', 'pos_(2,2,-1)', 'vel_(2,2,-1)']
 
-X=[i for i in data_final_vars if i not in y]
+#X=[i for i in data_final_vars if i not in y]
 
 x = data[X]
 y = data['survive']
-
+x = data[list(inp.controlFactors.keys())]
 
 from sklearn.feature_selection import RFE
 from sklearn.linear_model import LogisticRegression
@@ -145,9 +129,8 @@ cols = ['pos_(2,1,0)']
 xi = data[cols].values.reshape(-1,1)
 yi = data['survive'].values.reshape(-1,1)
 logreg.fit(xi,np.ravel(yi.astype(int)))
-
-#print(logreg.coef_)
-#print(logreg.intercept_)
+print(logreg.coef_)
+print(logreg.intercept_)
 
 #pdb.set_trace()
 plt.scatter(xi,yi)
@@ -155,7 +138,7 @@ plt.xlabel('pos_(2,1,0)')
 plt.ylabel('Probability of Survival')
 plt.scatter(xi,logreg.predict_proba(xi)[:,1])
 plt.show()
-plt.savefig('Logistic Regression Single Factor')
+plt.savefig('figures/LogisticRegressionSingleFactor')
 
 x = np.linspace(-10,10,40).reshape(40,1)
 y = 1/(1+np.exp(-(logreg.intercept_+logreg.coef_*x)))
