@@ -1,5 +1,6 @@
 from __future__ import division 
 
+import pylab as pl
 import pandas as pd
 import numpy as np
 import pdb
@@ -13,7 +14,46 @@ plt.rc("font",size=14)
 sns.set(style="white")
 sns.set(style="whitegrid",color_codes=True)
 
+
 data = pd.read_csv("Simulation.csv")
+#data.hist()
+#pl.show()
+
+#pdb.set_trace()
+
+
+#Plot showing major factors that survived 
+surv = data.ix[:,'survive']
+admitted = data.loc[surv == 1]
+not_admitted = data.loc[surv == 0]
+
+plt.scatter(admitted.ix[:,'pos_(2,1,0)'],admitted.ix[:,'vel_(2,1,0)'], label='Survived')
+plt.legend()
+plt.scatter(not_admitted.ix[:,'pos_(2,1,0)'],not_admitted.ix[:,'vel_(2,1,0)'],label = 'Not Survived')
+plt.xlabel('pos_(2,1,0)')
+plt.ylabel('vel_(2,1,0)')
+plt.legend()
+plt.show()
+plt.savefig('Scatter Plot 1')
+
+plt.scatter(admitted.ix[:,'pos_(2,1,0)'],admitted.ix[:,'mass_(1)'], label='Survived')
+plt.legend()
+plt.scatter(not_admitted.ix[:,'pos_(2,1,0)'],not_admitted.ix[:,'mass_(1)'],label = 'Not Survived')
+plt.xlabel('pos_(2,1,0)')
+plt.ylabel('mass_(1)')
+plt.legend()
+plt.show()
+plt.savefig('Scatter Plot 3')
+
+#plt.scatter(admitted.ix[:,'pos_(2,1,0)'],admitted.ix[:,'survive'], label='Survived')
+#plt.legend()
+#plt.scatter(not_admitted.ix[:,'pos_(2,1,0)'],not_admitted.ix[:,'survive'],label = 'Not Survived')
+#plt.xlabel('pos_(2,1,0)')
+#plt.ylabel('survive')
+#plt.legend()
+#plt.show()
+#plt.savefig('Scatter Plot 2')
+
 
 data_1 = pd.read_csv("Simulation.csv")
 
@@ -68,47 +108,72 @@ y = data['survive']
 from sklearn.feature_selection import RFE
 from sklearn.linear_model import LogisticRegression
 
-pdb.set_trace()
+#pdb.set_trace()
 
+#This section use the RFE method to help determine significant factor for the
+#surrogate model 
+
+#rfe_1 looks for the leading significant factor that determines the
+#survival of the orbit 
 logreg = LogisticRegression()
 rfe_1 = RFE(logreg,1)
 rfe_1 = rfe_1.fit(x,y)
 print(rfe_1.support_)
 print(rfe_1.ranking_)
-logreg.fit(x,y)
-print('Coefficients:')
-print(logreg.coef_)
 
-rfe_1 = RFE(logreg,2)
-rfe_1 = rfe_1.fit(x,y)
-print(rfe_1.support_)
-print(rfe_1.ranking_)
 
-rfe_1 = RFE(logreg,3)
-rfe_1 = rfe_1.fit(x,y)
-print(rfe_1.support_)
-print(rfe_1.ranking_)
+rfe_2 = RFE(logreg,2)
+rfe_2 = rfe_2.fit(x,y)
+print(rfe_2.support_)
+print(rfe_2.ranking_)
 
-rfe_1 = RFE(logreg,4)
-rfe_1 = rfe_1.fit(x,y)
-print(rfe_1.support_)
-print(rfe_1.ranking_)
+rfe_3 = RFE(logreg,3)
+rfe_3 = rfe_3.fit(x,y)
+print(rfe_3.support_)
+print(rfe_3.ranking_)
 
-rfe_1 = RFE(logreg,8)
-rfe_1 = rfe_1.fit(x,y)
-print(rfe_1.support_)
-print(rfe_1.ranking_)
+#This looks at the saturated model that accounts all of them
+#logreg.fit(x,y)
+#print('Coefficients:')
+#print(logreg.coef_)
+#print('Intercept')
+#print(logreg.intercept_)
+
+#This looks at a single factor 
+cols = ['pos_(2,1,0)']
+xi = data[cols].values.reshape(-1,1)
+yi = data['survive'].values.reshape(-1,1)
+logreg.fit(xi,np.ravel(yi.astype(int)))
+
+#print(logreg.coef_)
+#print(logreg.intercept_)
+
+#pdb.set_trace()
+plt.scatter(xi,yi)
+plt.xlabel('pos_(2,1,0)')
+plt.ylabel('Probability of Survival')
+plt.scatter(xi,logreg.predict_proba(xi)[:,1])
+plt.show()
+plt.savefig('Logistic Regression Single Factor')
+
+x = np.linspace(-10,10,40).reshape(40,1)
+y = 1/(1+np.exp(-(logreg.intercept_+logreg.coef_*x)))
+y.reshape(40,1)
+plt.plot(x,y)
+plt.show()
+plt.savefig('Logistic Regression Single Factor Curve')
 
 import statsmodels.api as sm
 logit_model_all=sm.Logit(y,x)
 result=logit_model_all.fit()
 print("All features accounted!")
 print(result.summary2())
+print(np.exp(result.params))
 
-from scipy.special import expit 
 
+pdb.set_trace()
+'''
 x = data['pos_(2,1,0)']
-
 logit_model_1=sm.Logit(y,x)
 result=logit_model_1.fit()
 print("Single Feature accounted!")
@@ -126,7 +191,6 @@ print(result.summary2())
 logreg.fit(x,y)
 print(logreg.coef_)
 print(logreg.intercept_)
-
-
+'''
 
 
